@@ -1,6 +1,14 @@
 import { db } from './db';
-import { AuditLogEntry, InvoiceStatus } from '../../types';
-import { MOCK_TRAVELER } from '../mockData';
+import { AuditLogEntry, InvoiceStatus, SystemUser, ProductionSchedule } from '../../types';
+import { MOCK_TRAVELER, INITIAL_USERS, INITIAL_CALIBRATIONS } from '../mockData';
+import { initializeFirebase, subscribeToSchedules } from '../firebaseProductionService';
+
+// Initialize Firebase Auth/DB connection immediately
+initializeFirebase().then(userId => {
+  console.log(`[Firebase] PocketOps connected. User ID: ${userId}`);
+}).catch(err => {
+  console.error("[Firebase] Initialization failed:", err);
+});
 
 // Mock Backend API Service
 // Simulates a Node.js/Express application structure
@@ -52,6 +60,23 @@ const reconstructTraveler = (runId: string): any => {
 };
 
 export const BackendAPI = {
+  // --- Authentication Endpoint ---
+  login: async (email: string, pass: string): Promise<SystemUser> => {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Simple mock validation against mock users
+    const user = INITIAL_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+    // Mock successful login: Any valid email works, password '123' works for everyone.
+    if (user && pass === '123') {
+      // Simulate returning a user session object
+      return user;
+    }
+
+    throw new Error("401 Unauthorized: Invalid email or password.");
+  },
+
   // Endpoint: POST /api/v1/audit/log
   // Purpose: Immutable Log Ingestion
   ingestAuditLog: async (entry: Omit<AuditLogEntry, 'id'>) => {
@@ -250,16 +275,20 @@ export const BackendAPI = {
     };
   },
 
-  // --- Phase 2: Planning ---
+  // --- Phase 2: Planning (UPDATED TO USE FIRESTORE) ---
 
-  getProductionSchedules: async () => {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    return db.tbl_schedules;
+  // New function to establish real-time connection to schedules
+  subscribeToProductionSchedules: (callback: (schedules: ProductionSchedule[]) => void) => {
+    // This function returns the Firestore unsubscribe function directly
+    return subscribeToSchedules(callback, (e) => {
+      console.error("Firestore Schedule Subscription Error:", e);
+    });
   },
 
   getCalibrations: async () => {
     await new Promise(resolve => setTimeout(resolve, 400));
-    return db.tbl_calibrations;
+    // Continue to use mock data for calibrations
+    return INITIAL_CALIBRATIONS;
   },
 
   // --- Phase 2: Traceability ---

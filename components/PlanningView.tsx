@@ -5,16 +5,13 @@ import { Zap, AlertCircle, PenTool, Calendar, Clock } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend, Cell } from 'recharts';
 import { ComplianceMode, ProductionSchedule, CalibrationRecord } from '../types';
 
+// Updated FORECAST_DATA to cover 3 months (Oct, Nov, Dec)
 const FORECAST_DATA = [
-   { month: 'Nov', demand: 4000, capacity: 5000 },
-   { month: 'Dec', demand: 3000, capacity: 4800 },
-   { month: 'Jan', demand: 5500, capacity: 5000 }, // Over capacity
-   { month: 'Feb', demand: 4500, capacity: 5200 },
+   { month: 'Oct', demand: 3800, capacity: 5000 },
+   { month: 'Nov', demand: 5500, capacity: 5000 }, // Over capacity
+   { month: 'Dec', demand: 4200, capacity: 5200 },
+   { month: 'Jan', demand: 4000, capacity: 5000 }, // Next month
 ];
-
-// Mock transformation of schedules to Gantt-friendly data
-// We simulate "Day 0" as Oct 28
-
 
 interface PlanningViewProps {
    complianceMode?: ComplianceMode;
@@ -26,33 +23,33 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode }) =>
    const [schedules, setSchedules] = useState<ProductionSchedule[]>([]);
    const [calibrations, setCalibrations] = useState<CalibrationRecord[]>([]);
 
+   // Real-time Subscription to Production Schedules (Firestore)
    useEffect(() => {
-      const loadPlanningData = async () => {
-         try {
-            const [schData, calData] = await Promise.all([
-               BackendAPI.getProductionSchedules(),
-               BackendAPI.getCalibrations()
-            ]);
-            setSchedules(schData);
-            setCalibrations(calData);
-         } catch (e) {
-            console.error("Planning data load failed", e);
-         }
-      };
-      loadPlanningData();
-   }, []);
+      // 1. Load Calibrations once (still mock data from API)
+      BackendAPI.getCalibrations().then(setCalibrations);
+
+      // 2. Subscribe to Production Schedules in real-time
+      const unsubscribe = BackendAPI.subscribeToProductionSchedules(setSchedules);
+
+      // Return the unsubscribe function for cleanup
+      return () => unsubscribe();
+   }, []); // Empty dependency array means it runs once on mount
 
    const ganttData = schedules.map(sch => {
-      let offset = 0;
-      if (sch.startDate.includes('10-28')) offset = 0;
-      if (sch.startDate.includes('11-01')) offset = 4;
-      if (sch.startDate.includes('11-05')) offset = 8;
-      if (sch.startDate.includes('11-12')) offset = 15;
+      // Calculate offset based on days from Oct 1st
+      const date = new Date(sch.startDate);
+      const startOfOct = new Date('2024-10-01');
+      const diffTime = Math.abs(date.getTime() - startOfOct.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Calculate offset and duration dynamically
+      const offset = diffDays > 0 ? diffDays : 0;
+      const duration = Math.ceil(sch.plannedQty / 100) + Math.round(Math.random() * 5);
 
       return {
          name: sch.machineCenter,
          offset: offset,
-         duration: Math.ceil(sch.plannedQty / 20) + 2,
+         duration: duration,
          status: sch.status,
          part: sch.partNumber
       };
@@ -63,6 +60,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode }) =>
          case 'Delayed': return '#EF4444'; // Red
          case 'In Progress': return '#F97316'; // Orange
          case 'Scheduled':
+         case 'Completed': // Also a final state, often fine to be black/gray
          default: return '#1D1D1F'; // Black
       }
    };
@@ -73,7 +71,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode }) =>
          {/* Top: Gantt Timeline */}
          <TacticalCard title="Production Schedule Timeline" className="h-80 md:h-96">
             <div className="flex items-center gap-4 mb-4 text-xs font-medium text-gray-500">
-               <div className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-900 rounded-sm"></div>Scheduled</div>
+               <div className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-900 rounded-sm"></div>Scheduled / Completed</div>
                <div className="flex items-center gap-1"><div className="w-3 h-3 bg-orange-500 rounded-sm"></div>In Progress</div>
                <div className="flex items-center gap-1"><div className="w-3 h-3 bg-red-500 rounded-sm"></div>Delayed</div>
             </div>
@@ -100,10 +98,14 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode }) =>
                         if (active && payload && payload.length) {
                            const data = payload[1]?.payload; // Access the main bar payload
                            if (!data) return null;
+                           // Find the actual schedule item to show more detail (e.g., start date)
+                           const scheduleItem = schedules.find(s => s.machineCenter === data.name && s.partNumber === data.part);
+
                            return (
                               <div className="bg-white p-3 rounded-xl shadow-xl border border-gray-100 text-xs">
                                  <p className="font-bold text-gray-900 mb-1">{data.name}</p>
                                  <p className="text-gray-500">Part: <span className="font-mono text-gray-700">{data.part}</span></p>
+                                 {scheduleItem && <p className="text-gray-500">Start: <span className="font-mono text-gray-700">{scheduleItem.startDate}</span></p>}
                                  <p className="text-gray-500">Est. Duration: {data.duration} days</p>
                                  <div className={`mt-2 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase text-white ${data.status === 'Delayed' ? 'bg-red-500' : data.status === 'In Progress' ? 'bg-orange-500' : 'bg-gray-900'}`}>
                                     {data.status}
@@ -127,11 +129,12 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode }) =>
 
             {/* Custom X-Axis Labels Simulation */}
             <div className="flex justify-between pl-[140px] pr-8 text-[10px] text-gray-400 font-mono border-t border-gray-100 pt-2">
-               <span>Oct 28</span>
-               <span>Nov 04</span>
-               <span>Nov 11</span>
-               <span>Nov 18</span>
-               <span>Nov 25</span>
+               <span>Oct 01</span>
+               <span>Oct 15</span>
+               <span>Nov 01</span>
+               <span>Nov 15</span>
+               <span>Dec 01</span>
+               <span>Dec 15</span>
             </div>
          </TacticalCard>
 

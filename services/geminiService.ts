@@ -1,14 +1,21 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Conditionally initialize the AI service only if the key is present.
+// Otherwise, set 'ai' to null to handle the lack of uplink gracefully.
+const apiKey = process.env.API_KEY;
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export const askTacticalAssistant = async (
   context: string,
   userPrompt: string
 ): Promise<string> => {
   try {
+    if (!ai) {
+      return "uplink_error: AI service offline. API key not configured.";
+    }
+
     const modelId = "gemini-2.5-flash"; // Fast response for UI interactions
-    
+
     const systemInstruction = `
       You are PocketOps-AI, a specialized tactical assistant for a Defense & Space manufacturing ERP.
       Your tone is professional, concise, and military-grade (e.g., "Affirmative", "Analyzing", "Anomaly Detected").

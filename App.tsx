@@ -34,7 +34,7 @@ import { BackendAPI } from './services/backend/api';
 import { auditService } from './services/auditService';
 import { telemetryService } from './services/telemetryService';
 import { monitoringService } from './services/monitoringService';
-import { ComplianceMode, UserRole, AuditLogEntry, InventoryItem, ProductionRun } from './types';
+import { ComplianceMode, UserRole, AuditLogEntry, InventoryItem, ProductionRun, SystemUser } from './types';
 
 enum View {
   DASHBOARD,
@@ -64,8 +64,8 @@ const App: React.FC = () => {
   const [traveler, setTraveler] = useState<ProductionRun | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Demo State: Mock User Role for Shop Floor Security
-  const [currentUserRole, setCurrentUserRole] = useState<UserRole>(UserRole.PRODUCTION_OPERATOR);
+  // New State: Store the actual logged-in user object
+  const [currentUser, setCurrentUser] = useState<SystemUser | null>(null);
 
   // Subscribe to Audit Service
   useEffect(() => {
@@ -126,28 +126,43 @@ const App: React.FC = () => {
   };
 
   // Telemetry for Login
-  const handleLogin = () => {
+  const handleLogin = (user: SystemUser) => {
     const span = telemetryService.startSpan('user_authentication');
+    setCurrentUser(user);
     setIsAuthenticated(true);
     telemetryService.endSpan(span);
   };
 
   // Demo: Cycle roles on profile click
   const cycleRole = () => {
+    // Only cycle roles if a user is logged in
+    if (!currentUser) return;
+
     const roles = [
       UserRole.PRODUCTION_OPERATOR,
       UserRole.QUALITY_INSPECTOR,
       UserRole.LOGISTICS_SPECIALIST,
       UserRole.ADMIN
     ];
-    const currentIndex = roles.indexOf(currentUserRole);
+    const currentIndex = roles.indexOf(currentUser.role);
     const nextRole = roles[(currentIndex + 1) % roles.length];
-    setCurrentUserRole(nextRole);
+
+    // Update the currentUser object with the new role
+    const updatedUser = { ...currentUser, role: nextRole };
+    setCurrentUser(updatedUser);
+
     alert(`Demo: Switched role to ${nextRole}`);
   };
 
+  // Determine current user role for children components, default to OPERATOR if null (shouldn't happen here)
+  const currentUserRole = currentUser?.role || UserRole.PRODUCTION_OPERATOR;
+
   if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
+    return (
+      <div className="h-screen w-screen">
+        <Login onLogin={handleLogin} />
+      </div>
+    );
   }
 
   if (isLoading) {
@@ -176,7 +191,7 @@ const App: React.FC = () => {
           <span className="font-display font-bold text-lg">PocketOps</span>
         </div>
         <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold">
-          {currentUserRole === UserRole.ADMIN ? 'AD' : 'OP'}
+          {currentUser ? currentUser.name.split(' ').map(n => n[0]).join('') : 'UN'}
         </div>
       </div>
 
@@ -307,25 +322,25 @@ const App: React.FC = () => {
 
         {/* User Profile "Key" */}
         <div className="mt-auto pt-4 lg:block hidden">
-          {!sidebarCollapsed ? (
+          {(!sidebarCollapsed && currentUser) ? (
             <div
               className="bg-white rounded-2xl p-4 shadow-key border border-white/50 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
               onClick={cycleRole}
               title="Click to cycle User Role (Demo)"
             >
               <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-800">
-                {currentUserRole === UserRole.ADMIN ? 'AD' : 'OP'}
+                {currentUser.name.split(' ').map(n => n[0]).join('')}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-gray-900 truncate">J. Doe</p>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide truncate">{currentUserRole}</p>
+                <p className="text-sm font-bold text-gray-900 truncate">{currentUser.name}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide truncate">{currentUser.role}</p>
               </div>
-              <button onClick={(e) => { e.stopPropagation(); setIsAuthenticated(false); }} className="text-gray-400 hover:text-red-500 transition-colors">
+              <button onClick={(e) => { e.stopPropagation(); setIsAuthenticated(false); setCurrentUser(null); }} className="text-gray-400 hover:text-red-500 transition-colors">
                 <LogOut size={18} />
               </button>
             </div>
           ) : (
-            <button onClick={() => setIsAuthenticated(false)} className="w-12 h-12 rounded-2xl bg-white shadow-key flex items-center justify-center text-gray-400 hover:text-red-500">
+            <button onClick={() => { setIsAuthenticated(false); setCurrentUser(null); }} className="w-12 h-12 rounded-2xl bg-white shadow-key flex items-center justify-center text-gray-400 hover:text-red-500">
               <LogOut size={20} />
             </button>
           )}
@@ -333,7 +348,7 @@ const App: React.FC = () => {
 
         {/* Mobile Logout Button */}
         <div className="mt-auto pt-4 lg:hidden">
-          <button onClick={() => setIsAuthenticated(false)} className="w-full flex items-center gap-3 p-4 rounded-2xl bg-red-50 text-red-600 font-bold">
+          <button onClick={() => { setIsAuthenticated(false); setCurrentUser(null); }} className="w-full flex items-center gap-3 p-4 rounded-2xl bg-red-50 text-red-600 font-bold">
             <LogOut size={20} />
             <span>Log Out</span>
           </button>

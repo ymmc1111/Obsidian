@@ -1,11 +1,64 @@
-
-
-import { 
+import {
   InventoryItem, ItemStatus, SensitivityLevel, AuditLogEntry, ProductionRun,
   Vendor, PurchaseOrder, PurchaseOrderStatus, Invoice, InvoiceStatus, SalesOrder, SalesOrderStatus,
   SystemUser, UserRole, ProductionSchedule, CertificateOfConformance, ComplianceMode,
   CAPAEntry, ValidationDocument, CalibrationRecord, EnvironmentalLog, FinancialKPI, OEEData
 } from '../types';
+
+// Helper function to generate a date string offset from a start date
+const getDateOffset = (startDate: Date, days: number): string => {
+  const date = new Date(startDate);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split('T')[0];
+};
+
+// Function to generate 3 months of diverse production schedules
+const generateSchedules = (): ProductionSchedule[] => {
+  const schedules: ProductionSchedule[] = [];
+  const partNumbers = ['XB-70-TI', 'GUID-SYS-V4', 'THRUSTER-NZL-09', 'ELEC-CTRL-PCB', 'FRAME-ASSY-S2'];
+  const machineCenters = ['CNC-Lathe-A', 'Assembly-Cleanroom', 'Cutting-Bay-1', '3D-Print-Metal', 'Laser-Engrave-B'];
+  const statuses = ['Scheduled', 'Scheduled', 'In Progress', 'Delayed', 'Completed'];
+
+  // Start date is Sept 28, 2024, to cover Oct, Nov, Dec
+  const runStart = new Date('2024-09-28');
+
+  // Generate 18 schedules spanning the three months
+  for (let i = 1; i <= 18; i++) {
+    // Spread dates out by ~5 days + random offset
+    const offsetDays = Math.floor(i * 5 + Math.random() * 3);
+    const startDate = getDateOffset(runStart, offsetDays);
+    const plannedQty = Math.round(Math.random() * 500) + 50; // 50 to 550 units
+    const loadFactor = Math.floor(Math.random() * 40) + 55; // 55% to 95%
+
+    let status = statuses[i % statuses.length];
+
+    // Logic to ensure realism: Older items should often be 'Completed'
+    if (offsetDays < 35) { // Schedules in Oct
+      status = 'Completed';
+    }
+    // More recent items should be 'Scheduled' or 'In Progress'
+    if (offsetDays > 80 && status === 'Completed') { // Schedules in Dec
+      status = 'Scheduled';
+    }
+    // Introduce a specific delay case
+    if (i === 15) {
+      status = 'Delayed';
+    }
+
+    schedules.push({
+      id: `SCH-2024-${100 + i}`,
+      partNumber: partNumbers[i % partNumbers.length],
+      plannedQty: plannedQty,
+      startDate: startDate,
+      machineCenter: machineCenters[i % machineCenters.length],
+      loadFactor: status === 'Completed' ? 100 : loadFactor,
+      status: status as 'Scheduled' | 'Delayed' | 'In Progress',
+    });
+  }
+
+  return schedules;
+};
+
 
 export const INITIAL_INVENTORY: InventoryItem[] = [
   {
@@ -205,63 +258,58 @@ export const INITIAL_USERS: SystemUser[] = [
   { id: 'U-005', name: 'N. Romanoff', email: 'n.romanoff@pocketops.mil', role: UserRole.LOGISTICS_SPECIALIST, status: 'Active', lastActive: '1h ago' },
 ];
 
-export const INITIAL_SCHEDULES: ProductionSchedule[] = [
-  { id: 'SCH-2024-101', partNumber: 'XB-70-TI', plannedQty: 500, startDate: '2024-11-01', machineCenter: 'CNC-Lathe-A', loadFactor: 85, status: 'Scheduled' },
-  { id: 'SCH-2024-102', partNumber: 'GUID-SYS-V4', plannedQty: 20, startDate: '2024-11-05', machineCenter: 'Assembly-Cleanroom', loadFactor: 45, status: 'Scheduled' },
-  { id: 'SCH-2024-103', partNumber: 'AL-SHEET-7075', plannedQty: 100, startDate: '2024-10-28', machineCenter: 'Cutting-Bay-1', loadFactor: 92, status: 'Delayed' },
-  { id: 'SCH-2024-104', partNumber: 'THRUSTER-NZL-09', plannedQty: 4, startDate: '2024-11-12', machineCenter: '3D-Print-Metal', loadFactor: 60, status: 'In Progress' },
-];
+export const INITIAL_SCHEDULES: ProductionSchedule[] = generateSchedules(); // <-- REPLACED WITH GENERATED DATA
 
 export const generateCoC = (salesOrderId: string, mode: ComplianceMode = ComplianceMode.DEFENCE): CertificateOfConformance => {
-    const order = INITIAL_ORDERS.find(o => o.id === salesOrderId);
-    const traceItem = INITIAL_INVENTORY.find(i => i.id === 'INV-002'); // Mock trace
+  const order = INITIAL_ORDERS.find(o => o.id === salesOrderId);
+  const traceItem = INITIAL_INVENTORY.find(i => i.id === 'INV-002'); // Mock trace
 
-    let statement = 'Product conforms to AS9100D and meets all ITAR requirements.';
-    
-    if (mode === ComplianceMode.PHARMA_US) {
-        statement = 'Product conforms to FDA 21 CFR Part 11 and GxP standards.';
-    } else if (mode === ComplianceMode.PHARMA_EU) {
-        statement = 'Product conforms to EU GMP Annex 11 requirements.';
-    } else if (mode === ComplianceMode.GCAP) {
-        statement = 'Product conforms to Global Compliance & Audit Protocols.';
-    }
+  let statement = 'Product conforms to AS9100D and meets all ITAR requirements.';
 
-    return {
-        id: `COC-${Math.floor(Math.random() * 10000)}`,
-        salesOrderId: salesOrderId,
-        partNumber: 'ASM-THRUSTER-NOZZLE', // Mock
-        quantityShipped: 1, // Mock
-        finalInspectionStatus: 'Passed',
-        digitalSignature: `SIG-RSA-4096-${Math.floor(Math.random() * 99999)}`,
-        rawMaterialTrace: [
-            { item: traceItem?.nomenclature || 'Raw Material', lotNumber: traceItem?.batchLot || 'LOT-UNKNOWN', vendorCage: traceItem?.cageCode || 'UNKNOWN' }
-        ],
-        complianceStatement: statement,
-        complianceMode: mode
-    };
+  if (mode === ComplianceMode.PHARMA_US) {
+    statement = 'Product conforms to FDA 21 CFR Part 11 and GxP standards.';
+  } else if (mode === ComplianceMode.PHARMA_EU) {
+    statement = 'Product conforms to EU GMP Annex 11 requirements.';
+  } else if (mode === ComplianceMode.GCAP) {
+    statement = 'Product conforms to Global Compliance & Audit Protocols.';
+  }
+
+  return {
+    id: `COC-${Math.floor(Math.random() * 10000)}`,
+    salesOrderId: salesOrderId,
+    partNumber: 'ASM-THRUSTER-NOZZLE', // Mock
+    quantityShipped: 1, // Mock
+    finalInspectionStatus: 'Passed',
+    digitalSignature: `SIG-RSA-4096-${Math.floor(Math.random() * 99999)}`,
+    rawMaterialTrace: [
+      { item: traceItem?.nomenclature || 'Raw Material', lotNumber: traceItem?.batchLot || 'LOT-UNKNOWN', vendorCage: traceItem?.cageCode || 'UNKNOWN' }
+    ],
+    complianceStatement: statement,
+    complianceMode: mode
+  };
 };
 
 export const INITIAL_CAPAS: CAPAEntry[] = [
-    { id: 'CAPA-101', description: 'Heat treat oven deviation', status: 'Closed', deviationType: 'Equipment', priority: 'Medium', createdBy: 'U-003' },
-    { id: 'CAPA-102', description: 'Material cert missing signature', status: 'Investigation', deviationType: 'Process', priority: 'High', createdBy: 'U-002' }
+  { id: 'CAPA-101', description: 'Heat treat oven deviation', status: 'Closed', deviationType: 'Equipment', priority: 'Medium', createdBy: 'U-003' },
+  { id: 'CAPA-102', description: 'Material cert missing signature', status: 'Investigation', deviationType: 'Process', priority: 'High', createdBy: 'U-002' }
 ];
 
 export const INITIAL_VALIDATIONS: ValidationDocument[] = [
-    { id: 'VAL-001', name: 'Autoclave Cycle B', type: 'PQ', status: 'Valid', nextReviewDate: '2025-01-15' },
-    { id: 'VAL-002', name: 'Cleanroom HVAC', type: 'OQ', status: 'Review Needed', nextReviewDate: '2024-11-20' },
-    { id: 'VAL-003', name: 'ERP E-Sig Module', type: 'IQ', status: 'Valid', nextReviewDate: '2025-06-01' }
+  { id: 'VAL-001', name: 'Autoclave Cycle B', type: 'PQ', status: 'Valid', nextReviewDate: '2025-01-15' },
+  { id: 'VAL-002', name: 'Cleanroom HVAC', type: 'OQ', status: 'Review Needed', nextReviewDate: '2024-11-20' },
+  { id: 'VAL-003', name: 'ERP E-Sig Module', type: 'IQ', status: 'Valid', nextReviewDate: '2025-06-01' }
 ];
 
 export const INITIAL_CALIBRATIONS: CalibrationRecord[] = [
-    { id: 'CAL-991', instrumentId: 'Digital Caliper #44', nextCalibration: '2024-12-01', lastCalibration: '2023-12-01', status: 'Valid' },
-    { id: 'CAL-992', instrumentId: 'Temp Sensor Z-1', nextCalibration: '2024-10-30', lastCalibration: '2023-10-30', status: 'Expiring Soon' },
-    { id: 'CAL-993', instrumentId: 'Flow Meter FM-02', nextCalibration: '2025-03-15', lastCalibration: '2024-03-15', status: 'Valid' }
+  { id: 'CAL-991', instrumentId: 'Digital Caliper #44', nextCalibration: '2024-12-01', lastCalibration: '2023-12-01', status: 'Valid' },
+  { id: 'CAL-992', instrumentId: 'Temp Sensor Z-1', nextCalibration: '2024-10-30', lastCalibration: '2023-10-30', status: 'Expiring Soon' },
+  { id: 'CAL-993', instrumentId: 'Flow Meter FM-02', nextCalibration: '2025-03-15', lastCalibration: '2024-03-15', status: 'Valid' }
 ];
 
 export const INITIAL_ENVIRONMENTAL_LOGS: EnvironmentalLog[] = [
-    { id: 'ENV-001', location: 'Cleanroom A', sensorId: 'SENS-01', metric: 'Temp', value: '21.4°C', timestamp: new Date().toISOString(), alertLevel: 'Nominal' },
-    { id: 'ENV-002', location: 'Cleanroom A', sensorId: 'SENS-02', metric: 'Humidity', value: '42%', timestamp: new Date().toISOString(), alertLevel: 'Nominal' },
-    { id: 'ENV-003', location: 'Storage B', sensorId: 'SENS-03', metric: 'Temp', value: '18.1°C', timestamp: new Date().toISOString(), alertLevel: 'Warning' },
+  { id: 'ENV-001', location: 'Cleanroom A', sensorId: 'SENS-01', metric: 'Temp', value: '21.4°C', timestamp: new Date().toISOString(), alertLevel: 'Nominal' },
+  { id: 'ENV-002', location: 'Cleanroom A', sensorId: 'SENS-02', metric: 'Humidity', value: '42%', timestamp: new Date().toISOString(), alertLevel: 'Nominal' },
+  { id: 'ENV-003', location: 'Storage B', sensorId: 'SENS-03', metric: 'Temp', value: '18.1°C', timestamp: new Date().toISOString(), alertLevel: 'Warning' },
 ];
 
 export const INITIAL_FINANCIAL_KPIS: FinancialKPI[] = [

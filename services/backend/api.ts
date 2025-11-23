@@ -1,5 +1,5 @@
 import { db } from './db';
-import { AuditLogEntry, InvoiceStatus, SystemUser, ProductionSchedule } from '../../types';
+import { AuditLogEntry, InvoiceStatus, SystemUser, ProductionSchedule, InventoryItem, ItemStatus, SensitivityLevel } from '../../types';
 import { MOCK_TRAVELER, INITIAL_USERS, INITIAL_CALIBRATIONS } from '../mockData';
 import { initializeFirebase, subscribeToSchedules } from '../firebaseProductionService';
 
@@ -167,24 +167,26 @@ export const BackendAPI = {
     }));
   },
 
+  // Helper to map DB inventory records to Frontend InventoryItem type
+  _mapDbToInventoryItem: (item: any): InventoryItem => ({
+    id: item.id,
+    partNumber: item.partNumber,
+    nomenclature: item.nomenclature,
+    cageCode: item.cageCode,
+    serialNumber: item.serialNumber,
+    location: item.location,
+    quantity: item.quantity,
+    unitCost: item.unitCost,
+    status: item.status,
+    sensitivity: item.cui_sensitive ? SensitivityLevel.CUI : SensitivityLevel.UNCLASSIFIED,
+    batchLot: item.batchLot
+  }),
+
   // Endpoint: GET /api/v1/inventory/all
   getInventory: async () => {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 500));
-
-    return db.tbl_inventory.map(item => ({
-      id: item.id,
-      partNumber: item.partNumber,
-      nomenclature: item.nomenclature,
-      cageCode: item.cageCode,
-      serialNumber: item.serialNumber,
-      location: item.location,
-      quantity: item.quantity,
-      unitCost: item.unitCost,
-      status: item.status,
-      sensitivity: item.cui_sensitive ? 'CUI' : 'UNCLASSIFIED', // Mapping back
-      batchLot: item.batchLot
-    }));
+    return db.tbl_inventory.map(BackendAPI._mapDbToInventoryItem);
   },
 
   // Endpoint: GET /api/v1/inventory/search
@@ -200,21 +202,85 @@ export const BackendAPI = {
     );
 
     return {
-      results: results.map(item => ({
-        id: item.id,
-        partNumber: item.partNumber,
-        nomenclature: item.nomenclature,
-        cageCode: item.cageCode,
-        serialNumber: item.serialNumber,
-        location: item.location,
-        quantity: item.quantity,
-        unitCost: item.unitCost,
-        status: item.status,
-        sensitivity: item.cui_sensitive ? 'CUI' : 'UNCLASSIFIED',
-        batchLot: item.batchLot
-      })),
+      results: results.map(BackendAPI._mapDbToInventoryItem),
       latency_ms: latency
     };
+  },
+
+  // Endpoint: POST /api/v1/inventory/add (Phase 2: Add New Asset)
+  addInventoryItem: async (itemData: Omit<InventoryItem, 'id'>): Promise<InventoryItem> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const newId = `INV-${Date.now()}`;
+    const newDbItem = {
+      id: newId,
+      partNumber: itemData.partNumber,
+      quantity: itemData.quantity,
+      location: itemData.location,
+      batchLot: itemData.batchLot,
+      unitCost: itemData.unitCost,
+      cui_sensitive: itemData.sensitivity === 'CUI' || itemData.sensitivity === 'SECRET',
+      status: itemData.status || ItemStatus.AVAILABLE,
+      nomenclature: itemData.nomenclature,
+      cageCode: itemData.cageCode || 'N/A',
+      serialNumber: itemData.serialNumber || 'N/A'
+    };
+    db.tbl_inventory.unshift(newDbItem);
+
+    // Log the receiving action
+    BackendAPI.ingestAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: 'J. Doe (U-001)', // TODO: Use actual current user
+      action: 'INVENTORY_RECEIVING',
+      details: `Received ${itemData.quantity} units of ${itemData.partNumber} (${newId}).`,
+      hash: '0xmockhash'
+    });
+
+    return BackendAPI._mapDbToInventoryItem(newDbItem);
+  },
+
+  // Endpoint: PATCH /api/v1/inventory/:id (Phase 2: Update Item)
+  updateInventoryItem: async (id: string, updates: Partial<InventoryItem>): Promise<InventoryItem> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const index = db.tbl_inventory.findIndex(i => i.id === id);
+
+    if (index === -1) throw new Error("Inventory item not found.");
+
+    let logMessage = `Updated item ${id}.`;
+    const originalItem = db.tbl_inventory[index];
+
+    // Track changes for audit log
+    if (updates.location && updates.location !== originalItem.location) {
+      logMessage += ` Location changed from ${originalItem.location} to ${updates.location}.`;
+      originalItem.location = updates.location;
+    }
+    if (updates.status && updates.status !== originalItem.status) {
+      logMessage += ` Status changed from ${originalItem.status} to ${updates.status}.`;
+      originalItem.status = updates.status;
+    }
+    if (updates.quantity !== undefined && updates.quantity !== originalItem.quantity) {
+      logMessage += ` Quantity adjusted from ${originalItem.quantity} to ${updates.quantity}.`;
+      originalItem.quantity = updates.quantity;
+    }
+
+    // Apply all updates
+    db.tbl_inventory[index] = {
+      ...originalItem,
+      ...updates,
+      cui_sensitive: updates.sensitivity
+        ? updates.sensitivity === 'CUI' || updates.sensitivity === 'SECRET'
+        : originalItem.cui_sensitive
+    };
+
+    // Log the update action
+    BackendAPI.ingestAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: 'J. Doe (U-001)', // TODO: Use actual current user
+      action: 'INVENTORY_UPDATE',
+      details: logMessage,
+      hash: '0xmockhash'
+    });
+
+    return BackendAPI._mapDbToInventoryItem(db.tbl_inventory[index]);
   },
 
   // Endpoint: GET /api/v1/production/traveler/active

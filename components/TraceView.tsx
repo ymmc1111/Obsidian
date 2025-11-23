@@ -4,11 +4,19 @@ import { Search, Package, Factory, CheckCircle2, Truck, AlertTriangle, Target, A
 import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_ORDERS } from '../services/mockData';
 import { auditService } from '../services/auditService';
 import { BackendAPI } from '../services/backend/api';
+import { UserRole } from '../types'; // Import UserRole
 
-export const TraceView: React.FC = () => {
+interface TraceViewProps {
+    currentUserRole: UserRole; // NEW PROP for RBAC
+}
+
+export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => { // Accept role prop
     const [searchTerm, setSearchTerm] = useState('SN-2024-9901');
     const [traceResult, setTraceResult] = useState<boolean>(true);
     const [isRecalling, setIsRecalling] = useState(false);
+
+    // Authorization check for Recall (Traceability: B)
+    const isRecallAuthorized = currentUserRole === UserRole.ADMIN || currentUserRole === UserRole.QUALITY_INSPECTOR;
 
     const handleTrace = () => {
         // Mock trace logic - always finds the "demo" item
@@ -16,6 +24,12 @@ export const TraceView: React.FC = () => {
     };
 
     const handleRecall = async () => {
+        // Traceability: B. Initiate Precision Recall
+        if (!isRecallAuthorized) {
+            alert("Authorization Denied: Only Admin or Quality Inspector can initiate a Recall.");
+            return;
+        }
+
         setIsRecalling(true);
 
         try {
@@ -25,9 +39,9 @@ export const TraceView: React.FC = () => {
 
             const result = await BackendAPI.initiateRecall(targetBatch);
 
-            // Log the recall action
+            // Log the recall action with actual user role
             auditService.logAction(
-                'J. Doe (U-001)',
+                `${currentUserRole} (Term-800)`, // Use actual role instead of hardcoded
                 'RECALL_INITIATED',
                 `Batch ${result.batchLot} (${result.affectedCount} Units) set to QUARANTINE status. Action ID: ${result.actionId}`
             );
@@ -74,12 +88,19 @@ export const TraceView: React.FC = () => {
                         </div>
                         <button
                             onClick={handleRecall}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-sm hover:bg-red-100 transition-colors shadow-sm"
+                            disabled={isRecalling || !isRecallAuthorized} // Disabled based on role
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-colors
+                                ${isRecallAuthorized
+                                    ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100'
+                                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                }
+                            `}
+                            title={!isRecallAuthorized ? 'Requires Admin or Quality Inspector role' : 'Initiate product recall'}
                         >
                             {isRecalling ? 'Processing...' : (
                                 <>
                                     <AlertTriangle size={16} />
-                                    Initiate Precision Recall
+                                    Initiate Precision Recall (B)
                                 </>
                             )}
                         </button>

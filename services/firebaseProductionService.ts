@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously } from 'firebase/auth';
-import { getFirestore, collection, onSnapshot, addDoc, query, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { ProductionSchedule, CalibrationRecord } from '../types';
 import { INITIAL_SCHEDULES, INITIAL_CALIBRATIONS } from './mockData';
 
@@ -174,6 +174,50 @@ export const addProductionSchedule = async (schedule: Omit<ProductionSchedule, '
         return docRef.id;
     } catch (error) {
         console.error('[Firebase] Error adding schedule:', error);
+        throw error;
+    }
+};
+
+/**
+ * Update an existing production schedule in Firestore
+ */
+export const updateProductionSchedule = async (
+    scheduleId: string,
+    updates: Partial<Omit<ProductionSchedule, 'id'>>
+): Promise<void> => {
+    if (!db) {
+        throw new Error('Firebase not initialized');
+    }
+
+    try {
+        const scheduleRef = doc(db, 'production_schedules', scheduleId);
+        await updateDoc(scheduleRef, {
+            ...updates,
+            updatedAt: new Date().toISOString()
+        });
+
+        console.log('[Firebase] Updated schedule:', scheduleId);
+    } catch (error) {
+        console.error('[Firebase] Error updating schedule:', error);
+        throw error;
+    }
+};
+
+/**
+ * Delete a production schedule from Firestore
+ */
+export const deleteProductionSchedule = async (scheduleId: string): Promise<void> => {
+    if (!db) {
+        throw new Error('Firebase not initialized');
+    }
+
+    try {
+        const scheduleRef = doc(db, 'production_schedules', scheduleId);
+        await deleteDoc(scheduleRef);
+
+        console.log('[Firebase] Deleted schedule:', scheduleId);
+    } catch (error) {
+        console.error('[Firebase] Error deleting schedule:', error);
         throw error;
     }
 };

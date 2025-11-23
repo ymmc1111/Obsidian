@@ -1,11 +1,137 @@
-
 import React, { useState, useEffect } from 'react';
-import { InventoryItem } from '../types';
-import { StatusBadge } from './Shared';
-import { Search, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { InventoryItem, ItemStatus, SensitivityLevel } from '../types';
+import { StatusBadge, TacticalCard } from './Shared';
+import { Search, SlidersHorizontal, Sparkles, Plus, Edit3, X, MapPin, Zap } from 'lucide-react';
 import { askTacticalAssistant } from '../services/geminiService';
 import { telemetryService } from '../services/telemetryService';
 import { BackendAPI } from '../services/backend/api';
+
+
+// --- Inventory Item Form Component ---
+const InventoryForm = ({ onClose, itemToEdit }: { onClose: () => void, itemToEdit: InventoryItem | null }) => {
+    const isEdit = !!itemToEdit;
+    const [partNumber, setPartNumber] = useState(itemToEdit?.partNumber || '');
+    const [nomenclature, setNomenclature] = useState(itemToEdit?.nomenclature || '');
+    const [serialNumber, setSerialNumber] = useState(itemToEdit?.serialNumber || '');
+    const [location, setLocation] = useState(itemToEdit?.location || 'WH-A-01-01');
+    const [quantity, setQuantity] = useState(itemToEdit?.quantity.toString() || '1');
+    const [status, setStatus] = useState(itemToEdit?.status || ItemStatus.AVAILABLE);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const locations = ['WH-A-01-01', 'WH-B-RACK-2', 'SECURE-LOCKER-B', 'WH-C-RACK-02', 'QUARANTINE-BAY'];
+    const statusOptions = Object.values(ItemStatus);
+
+    const handleSubmit = async () => {
+        if (!partNumber || !nomenclature || !location || !quantity) {
+            setError("Part Number, Nomenclature, Location, and Quantity are required.");
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        const itemData = {
+            partNumber,
+            nomenclature,
+            serialNumber,
+            location,
+            quantity: parseInt(quantity, 10),
+            status: status as ItemStatus,
+            unitCost: itemToEdit?.unitCost || 0.0,
+            batchLot: itemToEdit?.batchLot || 'LOT-NEW-' + Date.now(),
+            cageCode: itemToEdit?.cageCode || 'N/A',
+            sensitivity: itemToEdit?.sensitivity || SensitivityLevel.UNCLASSIFIED
+        };
+
+        try {
+            if (isEdit) {
+                // D. Change Location / Update Status
+                await BackendAPI.updateInventoryItem(itemToEdit.id, itemData);
+            } else {
+                // C. Add New Asset
+                await BackendAPI.addInventoryItem(itemData);
+            }
+            onClose();
+        } catch (e) {
+            console.error("Inventory action failed:", e);
+            setError("Failed to save inventory item. Check console for details.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/60 backdrop-blur-sm">
+            <div className="bg-white rounded-[2rem] shadow-2xl p-8 border border-gray-100 max-w-lg w-full animate-in fade-in zoom-in-95 duration-300">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-2xl font-display font-bold text-gray-900">{isEdit ? `Edit Item: ${itemToEdit?.partNumber}` : 'Add New Inventory Item'}</h3>
+                    <button onClick={onClose} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors">
+                        <X size={20} className="text-gray-500" />
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    {/* Part Number */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Part Number</label>
+                        <input type="text" value={partNumber} onChange={(e) => setPartNumber(e.target.value)}
+                            className="w-full bg-gray-50 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none" disabled={loading} />
+                    </div>
+                    {/* Nomenclature */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nomenclature</label>
+                        <input type="text" value={nomenclature} onChange={(e) => setNomenclature(e.target.value)}
+                            className="w-full bg-gray-50 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none" disabled={loading} />
+                    </div>
+                    {/* Serial Number */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Serial Number</label>
+                        <input type="text" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)}
+                            className="w-full bg-gray-50 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none" disabled={loading} />
+                    </div>
+                    {/* Location and Quantity - Side by Side */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Location (D. Change Location)</label>
+                            <select value={location} onChange={(e) => setLocation(e.target.value)}
+                                className="w-full bg-gray-50 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none" disabled={loading} >
+                                {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Quantity</label>
+                            <input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)}
+                                className="w-full bg-gray-50 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none" min="1" disabled={loading} />
+                        </div>
+                    </div>
+                    {/* Status (Only in Edit mode) */}
+                    {isEdit && (
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Status (D. Update Status)</label>
+                            <select value={status} onChange={(e) => setStatus(e.target.value as ItemStatus)}
+                                className="w-full bg-gray-50 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none" disabled={loading} >
+                                {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                        </div>
+                    )}
+
+                    {error && <p className="text-sm font-medium text-red-500">{error}</p>}
+                </div>
+
+                <button
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="w-full mt-8 py-4 bg-black text-white rounded-2xl font-bold shadow-key hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                    {loading ? <Zap size={20} className="animate-spin" /> : (isEdit ? 'Save Changes' : 'Add Item to Inventory')}
+                </button>
+            </div>
+        </div>
+    );
+};
+// --- End Inventory Item Form Component ---
+
 
 interface InventoryViewProps {
     items: InventoryItem[];
@@ -15,16 +141,41 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-
     const [displayedItems, setDisplayedItems] = useState<InventoryItem[]>(items);
     const [isSearching, setIsSearching] = useState(false);
+
+    // New CRUD State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [itemToEdit, setItemToEdit] = useState<InventoryItem | null>(null);
 
     // Sync props to state if items change (e.g. initial load)
     useEffect(() => {
         setDisplayedItems(items);
     }, [items]);
 
-    // Server-side Search & Monitoring
+    // Combine modal control functions
+    const handleOpenEdit = (item: InventoryItem) => {
+        setItemToEdit(item);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setItemToEdit(null);
+        // Re-trigger search to update displayed list after add/edit
+        if (searchTerm) {
+            // Force re-fetch by modifying search term state temporarily
+            setSearchTerm(s => s + ' ');
+            setTimeout(() => setSearchTerm(s => s.trim()), 10);
+        } else {
+            // If no search, force a full data refresh from API (optional but safe here)
+            // We rely on App.tsx to reload its 'items' prop when new data is added/updated 
+            // in a future Firestore implementation, but for now we rely on the search effect.
+        }
+    };
+
+
+    // Server-side Search & Monitoring (A. Server-Side Search)
     useEffect(() => {
         const performSearch = async () => {
             setIsSearching(true);
@@ -36,7 +187,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
 
                 setDisplayedItems(results);
 
-                // Record Telemetry (Real latency from "backend")
+                // Record Telemetry
                 telemetryService.recordDBQuery(queryName, latency_ms);
 
             } catch (error) {
@@ -46,7 +197,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
             }
         };
 
-        // Debounce to prevent spamming the "backend"
         const timeoutId = setTimeout(() => {
             performSearch();
         }, 500);
@@ -55,6 +205,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
     }, [searchTerm]);
 
     const handleAIAnalyze = async () => {
+        // B. AI Audit Simulation
         setIsAnalyzing(true);
         setAiAnalysis(null);
 
@@ -62,14 +213,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
         const span = telemetryService.startSpan('ai_decision_support', { context: 'inventory_audit' });
 
         try {
-            const context = JSON.stringify(items);
-            const prompt = "Analyze the current inventory levels. Identify any Dead Stock candidates (items with old batch lots) or potential shortages based on typical defense usage rates.";
+            // Use displayed items as context for relevance
+            const context = JSON.stringify(displayedItems.slice(0, 5));
+            const prompt = "Analyze the top 5 inventory levels. Identify any Dead Stock candidates (items with old batch lots) or potential shortages based on typical defense usage rates.";
             const result = await askTacticalAssistant(context, prompt);
             setAiAnalysis(result);
             telemetryService.endSpan(span, 'ok');
         } catch (error) {
             telemetryService.endSpan(span, 'error', error);
-            setAiAnalysis("Analysis failed due to system error.");
+            setAiAnalysis("Analysis failed due to system error: AI service offline.");
         } finally {
             setIsAnalyzing(false);
         }
@@ -77,6 +229,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
 
     return (
         <div className="h-full flex flex-col bg-white">
+
+            {/* Inventory Form Modal */}
+            {isModalOpen && <InventoryForm onClose={handleCloseModal} itemToEdit={itemToEdit} />}
+
             {/* Toolbar */}
             <div className="px-4 py-4 md:px-8 md:py-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between shrink-0 border-b border-gray-50">
                 <div className="relative w-full md:w-96 group">
@@ -91,6 +247,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
                 </div>
 
                 <div className="flex items-center gap-3 w-full md:w-auto">
+                    <button
+                        onClick={() => setIsModalOpen(true)} // Add new item
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100 font-semibold text-sm transition-all"
+                    >
+                        <Plus size={18} />
+                        <span>Add Asset (C)</span>
+                    </button>
                     <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-semibold text-sm transition-all">
                         <SlidersHorizontal size={18} />
                         <span>Filter</span>
@@ -100,7 +263,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
                         disabled={isAnalyzing}
                         className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-black text-white hover:bg-gray-800 font-semibold text-sm transition-all shadow-key disabled:opacity-50">
                         <Sparkles size={18} className={isAnalyzing ? "animate-spin" : ""} />
-                        {isAnalyzing ? 'Processing' : 'AI Audit'}
+                        {isAnalyzing ? 'Processing' : 'AI Audit (B)'}
                     </button>
                 </div>
             </div>
@@ -131,7 +294,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
                                 <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Quantity</th>
                                 <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Location</th>
                                 <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Status</th>
-                                <th className="pb-4 pr-4 text-right font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Cost</th>
+                                <th className="pb-4 pr-4 text-right font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -154,9 +317,20 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
                                         </div>
                                     </td>
                                     <td className="py-5 font-display font-medium text-gray-900">{item.quantity}</td>
-                                    <td className="py-5 text-sm text-gray-500">{item.location}</td>
+                                    <td className="py-5 text-sm text-gray-500 flex items-center gap-1">
+                                        <MapPin size={12} className={item.location.includes('SECURE') ? 'text-red-500' : 'text-gray-400'} />
+                                        {item.location}
+                                    </td>
                                     <td className="py-5"><StatusBadge status={item.status} /></td>
-                                    <td className="py-5 pr-4 text-right font-mono text-sm text-gray-600">${item.unitCost.toFixed(2)}</td>
+                                    <td className="py-5 pr-4 text-right">
+                                        <button
+                                            onClick={() => handleOpenEdit(item)}
+                                            className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                            title="Edit Location/Status (D)"
+                                        >
+                                            <Edit3 size={16} />
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

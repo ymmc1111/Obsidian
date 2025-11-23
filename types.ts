@@ -1,3 +1,4 @@
+
 export enum SensitivityLevel {
   UNCLASSIFIED = 'UNCLASSIFIED',
   CUI = 'CUI', // Controlled Unclassified Information
@@ -9,6 +10,29 @@ export enum ItemStatus {
   ALLOCATED = 'ALLOCATED',
   QUARANTINE = 'QUARANTINE',
   SCRAP = 'SCRAP'
+}
+
+export enum InvoiceStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  PAID = 'PAID',
+  OVERDUE = 'OVERDUE'
+}
+
+export enum PurchaseOrderStatus {
+  DRAFT = 'DRAFT',
+  SENT = 'SENT',
+  PARTIAL = 'PARTIAL',
+  FILLED = 'FILLED',
+  CLOSED = 'CLOSED'
+}
+
+export enum SalesOrderStatus {
+  NEW = 'NEW',
+  PROCESSING = 'PROCESSING',
+  SHIPPED = 'SHIPPED',
+  DELIVERED = 'DELIVERED',
+  BACKORDERED = 'BACKORDERED'
 }
 
 export interface InventoryItem {
@@ -53,4 +77,48 @@ export interface ProductionRun {
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'HALTED';
   currentStepIndex: number;
   steps: TravelerStep[];
+}
+
+export interface Vendor {
+  id: string;
+  name: string;
+  cageCode: string;
+  contact: string;
+  status: 'Active' | 'On Hold';
+}
+
+export interface PurchaseOrder {
+  id: string;
+  vendorId: string;
+  date: string;
+  totalAmount: number;
+  status: PurchaseOrderStatus;
+  items: { partNumber: string; qty: number; unitCost: number }[];
+}
+
+export interface ReceivingSlip {
+  id: string;
+  poId: string;
+  date: string;
+  matchStatus: 'Pending' | 'Complete' | 'Mismatched';
+}
+
+export interface Invoice {
+  id: string;
+  poId: string;
+  vendorId: string;
+  date: string;
+  amountDue: number;
+  status: InvoiceStatus;
+  glAccount: string;
+}
+
+export interface SalesOrder {
+  id: string;
+  customer: string;
+  date: string;
+  totalAmount: number;
+  status: SalesOrderStatus;
+  fulfillmentLocation: string;
+  backorderedItems: number;
 }

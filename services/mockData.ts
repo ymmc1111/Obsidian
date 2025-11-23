@@ -1,4 +1,8 @@
-import { InventoryItem, ItemStatus, SensitivityLevel, AuditLogEntry, ProductionRun } from '../types';
+
+import { 
+  InventoryItem, ItemStatus, SensitivityLevel, AuditLogEntry, ProductionRun,
+  Vendor, PurchaseOrder, PurchaseOrderStatus, Invoice, InvoiceStatus, SalesOrder, SalesOrderStatus
+} from '../types';
 
 export const INITIAL_INVENTORY: InventoryItem[] = [
   {
@@ -96,3 +100,96 @@ export const MOCK_TRAVELER: ProductionRun = {
     }
   ]
 };
+
+export const INITIAL_VENDORS: Vendor[] = [
+  { id: 'V-101', name: 'Titanium Dynamics', cageCode: '1A2B3', contact: 'sales@titaniumdyn.com', status: 'Active' },
+  { id: 'V-102', name: 'Orbital Circuits Inc.', cageCode: '9X8Y7', contact: 'orders@orbital.io', status: 'Active' },
+  { id: 'V-103', name: 'Secure Raw Materials LLC', cageCode: '4K5L6', contact: 'gov-contracts@securemat.com', status: 'On Hold' }
+];
+
+export const INITIAL_POS: PurchaseOrder[] = [
+  {
+    id: 'PO-2024-001',
+    vendorId: 'V-101',
+    date: new Date(Date.now() - 86400000 * 10).toISOString(), // 10 days ago
+    totalAmount: 12500.00,
+    status: PurchaseOrderStatus.FILLED,
+    items: [{ partNumber: 'XB-70-TI', qty: 1000, unitCost: 12.50 }]
+  },
+  {
+    id: 'PO-2024-002',
+    vendorId: 'V-102',
+    date: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+    totalAmount: 54000.00,
+    status: PurchaseOrderStatus.SENT,
+    items: [{ partNumber: 'GUID-SYS-V4', qty: 12, unitCost: 4500.00 }]
+  },
+  {
+    id: 'PO-2024-003',
+    vendorId: 'V-103',
+    date: new Date(Date.now() - 86400000 * 15).toISOString(), // 15 days ago
+    totalAmount: 3200.00,
+    status: PurchaseOrderStatus.PARTIAL,
+    items: [{ partNumber: 'AL-SHEET-7075', qty: 10, unitCost: 320.00 }]
+  }
+];
+
+export const INITIAL_INVOICES: Invoice[] = [
+  {
+    id: 'INV-9901',
+    poId: 'PO-2024-001',
+    vendorId: 'V-101',
+    date: new Date(Date.now() - 86400000 * 8).toISOString(),
+    amountDue: 12500.00,
+    status: InvoiceStatus.APPROVED,
+    glAccount: '5000-MAT-RAW'
+  },
+  {
+    id: 'INV-9902',
+    poId: 'PO-2024-003',
+    vendorId: 'V-103',
+    date: new Date(Date.now() - 86400000 * 12).toISOString(),
+    amountDue: 3200.00,
+    status: InvoiceStatus.OVERDUE,
+    glAccount: '5000-MAT-RAW'
+  },
+  {
+    id: 'INV-9903',
+    poId: 'PO-2024-002',
+    vendorId: 'V-102',
+    date: new Date(Date.now() - 86400000 * 1).toISOString(),
+    amountDue: 54000.00,
+    status: InvoiceStatus.PENDING,
+    glAccount: '5100-ELEC-COMP'
+  }
+];
+
+export const INITIAL_ORDERS: SalesOrder[] = [
+  {
+    id: 'SO-8821',
+    customer: 'SpaceX (Starbase)',
+    date: new Date(Date.now() - 3600000 * 4).toISOString(),
+    totalAmount: 450000.00,
+    status: SalesOrderStatus.PROCESSING,
+    fulfillmentLocation: 'US-East WH (Secure)',
+    backorderedItems: 0
+  },
+  {
+    id: 'SO-8822',
+    customer: 'Raytheon Missiles',
+    date: new Date(Date.now() - 86400000 * 1).toISOString(),
+    totalAmount: 125000.00,
+    status: SalesOrderStatus.SHIPPED,
+    fulfillmentLocation: 'Nevada Depot',
+    backorderedItems: 2
+  },
+  {
+    id: 'SO-8823',
+    customer: 'Anduril Industries',
+    date: new Date(Date.now() - 86400000 * 5).toISOString(),
+    totalAmount: 8900.00,
+    status: SalesOrderStatus.DELIVERED,
+    fulfillmentLocation: 'US-East WH (Secure)',
+    backorderedItems: 0
+  }
+];

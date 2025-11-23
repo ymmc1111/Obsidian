@@ -1,4 +1,6 @@
 
+import { BackendAPI } from './backend/api';
+
 interface Span {
   id: string;
   name: string;
@@ -9,7 +11,6 @@ interface Span {
 class TelemetryService {
   private activeSpans: Map<string, Span> = new Map();
 
-  // Simulate generating a trace ID (OpenTelemetry style)
   private generateId(): string {
     return Math.random().toString(16).substr(2, 16);
   }
@@ -21,13 +22,7 @@ class TelemetryService {
       startTime: performance.now(),
       tags,
     };
-    
-    // In a real implementation, this would handle parent contexts
     this.activeSpans.set(span.id, span);
-    
-    // Simulate OTel console exporter
-    console.debug(`[Telemetry] Span Started: ${name}`, tags);
-    
     return span;
   }
 
@@ -39,31 +34,38 @@ class TelemetryService {
       this.activeSpans.delete(span.id);
     }
 
-    // Enhance tags with status
-    const finalTags: Record<string, string> = { ...span.tags, status, duration_ms: duration.toFixed(2) };
+    const finalTags: Record<string, string> = { ...span.tags, status };
     if (error) {
         finalTags.error_message = error.message || String(error);
     }
 
-    console.debug(`[Telemetry] Span Ended: ${span.name} (${duration.toFixed(2)}ms)`, finalTags);
-    
-    // Here we would export to Jaeger/Zipkin
+    // Send to Backend API
+    BackendAPI.ingestTrace({
+        id: span.id,
+        name: span.name,
+        startTime: span.startTime,
+        duration: duration,
+        tags: finalTags
+    }).catch(err => console.error("[Telemetry] Failed to export span", err));
   }
 
   recordMetric(name: string, value: number, tags: Record<string, string> = {}) {
-    console.debug(`[Metric] Gauge/Histogram: ${name} = ${value}`, tags);
-    // Here we would export to Prometheus/CloudWatch
+    BackendAPI.ingestMetric({
+        name,
+        value,
+        tags
+    }).catch(err => console.error("[Telemetry] Failed to export metric", err));
   }
 
   incrementCounter(name: string, tags: Record<string, string> = {}) {
-    console.debug(`[Metric] Counter Inc: ${name}`, tags);
+    // In a real system, counters are aggregated locally then flushed.
+    // For this mock, we treat it as a metric with value 1
+    this.recordMetric(name, 1, tags);
   }
 
-  // Database Query Monitoring (Infrastructure Layer)
   recordDBQuery(query: string, durationMs: number) {
       const tags = { query_signature: query.substring(0, 50) + '...' };
       
-      // Threshold check: >200ms is considered slow in this high-performance context
       if (durationMs > 200) {
           console.warn(`[Telemetry] SLOW QUERY DETECTED: ${durationMs.toFixed(2)}ms`, query);
           this.recordMetric('db_query_duration_slow', durationMs, tags);

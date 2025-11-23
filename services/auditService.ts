@@ -1,22 +1,23 @@
+
 import { AuditLogEntry } from '../types';
-import { INITIAL_LOGS } from './mockData';
+import { BackendAPI } from './backend/api';
 
 class AuditService {
-  private logs: AuditLogEntry[] = [...INITIAL_LOGS];
-  private listeners: ((logs: AuditLogEntry[]) => void)[] = [];
+  // Removed local state 'logs'. Now stateless client.
 
-  getLogs() {
-    return this.logs;
+  // Logs are now fetched via subscription to the backend
+  subscribe(listener: (logs: AuditLogEntry[]) => void) {
+    return BackendAPI.subscribeToLogs(listener);
   }
 
   logAction(actor: string, action: string, details: string) {
     const timestamp = new Date().toISOString();
-    // Simulate a blockchain/integrity hash
+    
+    // Client-side Hash Generation (to be verified by backend)
     const mockHashInput = `${timestamp}|${actor}|${action}|${details}`;
     const hash = `0x${Math.abs(mockHashInput.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a},0)).toString(16)}${Math.random().toString(16).substr(2, 6)}`;
 
-    const newEntry: AuditLogEntry = {
-      id: `LOG-${Math.floor(Date.now() / 1000)}`,
+    const entryPayload = {
       timestamp,
       actor,
       action,
@@ -24,23 +25,16 @@ class AuditService {
       hash
     };
     
-    // Add to beginning of array for UI streams
-    this.logs = [newEntry, ...this.logs];
-    this.notify();
-  }
-
-  subscribe(listener: (logs: AuditLogEntry[]) => void) {
-    this.listeners.push(listener);
-    // Initial callback
-    listener(this.logs);
-    
-    return () => {
-      this.listeners = this.listeners.filter(l => l !== listener);
-    };
-  }
-
-  private notify() {
-    this.listeners.forEach(l => l(this.logs));
+    // Async call to Backend API
+    BackendAPI.ingestAuditLog(entryPayload)
+      .then(response => {
+        // Console log for debug visibility in this demo
+        // console.debug(`[AuditService] Log committed. ID: ${response.id}`);
+      })
+      .catch(err => {
+        console.error(`[AuditService] Failed to commit log:`, err);
+        // In a real app, queue for retry (Offline Mode support)
+      });
   }
 }
 

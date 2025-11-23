@@ -1,8 +1,11 @@
+
+
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { TacticalCard, StatWidget } from './Shared';
-import { AlertCircle, CheckCircle2, Package, Zap, Sparkles, Bot, Plus } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Package, Zap, Sparkles, Bot, Plus, Activity, AlertTriangle } from 'lucide-react';
 import { ComplianceMode } from '../types';
+import { INITIAL_OEE_DATA } from '../services/mockData';
 
 const DATA = [
   { name: 'M', value: 4000, compliance: 98 },
@@ -173,6 +176,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
         </div>
       </TacticalCard>
 
+      {/* Shop Floor Health (OEE) */}
+      <TacticalCard title="Shop Floor Health (OEE)" className="col-span-1 md:col-span-2 lg:col-span-2">
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+            {INITIAL_OEE_DATA.map((machine, i) => {
+                const overallOEE = Math.round((machine.availability * machine.performance * machine.quality) / 10000);
+                const isDown = machine.status === 'Down';
+                return (
+                    <div key={i} className={`p-4 rounded-2xl border ${isDown ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'} flex flex-col justify-between h-32`}>
+                        <div className="flex justify-between items-start">
+                             <div>
+                                <h4 className={`text-sm font-bold ${isDown ? 'text-red-700' : 'text-gray-900'}`}>{machine.machineId}</h4>
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide mt-1 ${isDown ? 'text-red-500' : 'text-green-600'}`}>
+                                    {isDown ? <AlertTriangle size={10} /> : <Activity size={10} />}
+                                    {machine.status}
+                                </span>
+                             </div>
+                             {isDown && <div className="px-2 py-0.5 bg-red-200 text-red-700 rounded text-[10px] font-bold">{machine.alerts} Alerts</div>}
+                        </div>
+                        <div className="flex items-end justify-between">
+                            <div>
+                                <p className="text-[10px] text-gray-400 uppercase tracking-wider">OEE Score</p>
+                                <p className="text-2xl font-display font-bold text-gray-900">{overallOEE}%</p>
+                            </div>
+                            <div className="h-10 w-10 relative">
+                                <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                                    <path className="text-gray-200" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                                    <path className={isDown ? 'text-red-500' : overallOEE > 85 ? 'text-green-500' : 'text-orange-500'} strokeDasharray={`${overallOEE}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+         </div>
+      </TacticalCard>
+
       {/* AI Sandbox */}
       <TacticalCard title="Simulate Impact // AI Sandbox" className="col-span-1 md:col-span-2">
          <div className="flex flex-col gap-4 mt-2">
@@ -202,21 +241,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
                     <p className="text-sm text-gray-800 font-medium leading-relaxed">{simulationResult}</p>
                 </div>
             )}
-         </div>
-      </TacticalCard>
-
-      {/* Workflow Builder */}
-      <TacticalCard title="Adaptive Workflow Builder" className="col-span-1 md:col-span-2 bg-gray-50 border-dashed border-gray-200">
-         <div className="flex flex-col items-center justify-center h-full py-6 text-center">
-            <div className="w-12 h-12 bg-white rounded-2xl shadow-key flex items-center justify-center mb-3 text-gray-400">
-                <Zap size={24} />
-            </div>
-            <h4 className="text-gray-900 font-bold">No-Code Logic</h4>
-            <p className="text-sm text-gray-500 max-w-xs mx-auto mt-1 mb-4">Create event-driven triggers without engineering support.</p>
-            <button className="px-5 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl text-sm font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 w-full md:w-auto justify-center">
-                <Plus size={16} />
-                <span>Create Custom Logic</span>
-            </button>
          </div>
       </TacticalCard>
 

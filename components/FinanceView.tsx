@@ -1,7 +1,9 @@
+
+
 import React, { useState } from 'react';
-import { INITIAL_INVOICES, INITIAL_VENDORS } from '../services/mockData';
+import { INITIAL_INVOICES, INITIAL_VENDORS, INITIAL_FINANCIAL_KPIS } from '../services/mockData';
 import { TacticalCard, StatWidget, StatusBadge } from './Shared';
-import { DollarSign, Clock, Lock, TrendingUp, Check, AlertTriangle } from 'lucide-react';
+import { DollarSign, Clock, Lock, TrendingUp, Check, AlertTriangle, ArrowUpRight, ArrowDownRight, PieChart, Scale } from 'lucide-react';
 import { Invoice, InvoiceStatus, ComplianceMode } from '../types';
 
 interface FinanceViewProps {
@@ -40,6 +42,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode }) => {
           default: return "ITAR Secure";
       }
   };
+
+  const plItems = INITIAL_FINANCIAL_KPIS.filter(k => k.type === 'PL');
+  const bsItems = INITIAL_FINANCIAL_KPIS.filter(k => k.type === 'BS');
 
   return (
     <div className="h-full flex flex-col bg-white p-4 md:p-8 gap-4 md:gap-6 overflow-y-auto">
@@ -84,6 +89,69 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode }) => {
                 <p className="text-xs text-gray-500">Next Audit: Q4 2024</p>
             </div>
         </TacticalCard>
+      </div>
+
+      {/* Core Financial Reporting */}
+      <div>
+         <h3 className="font-display text-lg font-semibold tracking-tight text-gray-900 mb-4">Core Financial Reporting</h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+             {/* Profit & Loss Summary */}
+             <TacticalCard title="Profit & Loss Summary (Q3 YTD)">
+                <div className="space-y-4 mt-2">
+                    {plItems.map((kpi, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl">
+                             <div className="flex items-center gap-3">
+                                 <div className="p-2 bg-white rounded-xl shadow-sm">
+                                     <PieChart size={16} className="text-gray-500" />
+                                 </div>
+                                 <span className="text-sm font-bold text-gray-900">{kpi.name}</span>
+                             </div>
+                             <div className="text-right">
+                                 <p className="text-sm font-mono font-bold text-gray-900">
+                                     {kpi.name.includes('Margin') ? `${kpi.value}%` : `$${(kpi.value / 1000).toFixed(0)}k`}
+                                 </p>
+                                 <p className={`text-xs font-medium flex items-center justify-end gap-1 ${kpi.trend.includes('+') ? 'text-green-600' : 'text-red-500'}`}>
+                                     {kpi.trend.includes('+') ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+                                     {kpi.trend}
+                                 </p>
+                             </div>
+                        </div>
+                    ))}
+                    <div className="pt-2 flex justify-end">
+                        <button className="text-xs font-bold text-gray-500 hover:text-black transition-colors">View Full Statement &rarr;</button>
+                    </div>
+                </div>
+             </TacticalCard>
+
+             {/* Balance Sheet Snapshot */}
+             <TacticalCard title="Balance Sheet Snapshot">
+                <div className="space-y-4 mt-2">
+                    {bsItems.map((kpi, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl">
+                             <div className="flex items-center gap-3">
+                                 <div className="p-2 bg-white rounded-xl shadow-sm">
+                                     <Scale size={16} className="text-gray-500" />
+                                 </div>
+                                 <span className="text-sm font-bold text-gray-900">{kpi.name}</span>
+                             </div>
+                             <div className="text-right">
+                                 <p className="text-sm font-mono font-bold text-gray-900">{kpi.value}</p>
+                                 <p className="text-xs font-medium text-gray-500">{kpi.trend}</p>
+                             </div>
+                        </div>
+                    ))}
+                     <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl mt-4">
+                        <div className="flex items-center gap-2 mb-1">
+                            <TrendingUp size={14} className="text-blue-600" />
+                            <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Liquidity Insight</span>
+                        </div>
+                        <p className="text-xs text-gray-800 font-medium leading-relaxed">
+                            Current ratio indicates healthy liquidity. Sufficient working capital to support planned Q4 inventory expansion.
+                        </p>
+                    </div>
+                </div>
+             </TacticalCard>
+         </div>
       </div>
 
       {/* Invoice Ledger */}

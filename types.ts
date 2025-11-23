@@ -170,32 +170,53 @@ export interface CertificateOfConformance {
     complianceMode: ComplianceMode;
 }
 
-export interface Capa {
+export interface CAPAEntry {
   id: string;
   description: string;
   status: 'Open' | 'Investigation' | 'Closed';
+  deviationType: string;
+  priority: 'High' | 'Medium';
+  createdBy: string;
 }
 
-export interface ValidationDoc {
+export interface ValidationDocument {
   id: string;
   name: string;
-  type: string;
+  type: 'IQ' | 'OQ' | 'PQ' | 'SOP';
   status: 'Valid' | 'Review Needed' | 'Expired';
   nextReviewDate: string;
 }
 
-export interface CalibrationItem {
+export interface CalibrationRecord {
   id: string;
   instrumentId: string;
   nextCalibration: string;
-  status: 'Valid' | 'Expiring Soon' | 'Expired';
+  lastCalibration: string;
+  status: 'Valid' | 'Expiring Soon' | 'Expired' | 'Overdue' | 'Calibrated';
 }
 
 export interface EnvironmentalLog {
   id: string;
   location: string;
+  sensorId: string;
   metric: 'Temp' | 'Humidity' | 'Pressure';
   value: string;
   timestamp: string;
   alertLevel: 'Nominal' | 'Warning' | 'Critical';
+}
+
+export interface FinancialKPI {
+  name: string;
+  value: number;
+  trend: string;
+  type: 'PL' | 'BS'; // P&L or Balance Sheet
+}
+
+export interface OEEData {
+  machineId: string;
+  availability: number;
+  performance: number;
+  quality: number;
+  status: 'Running' | 'Down';
+  alerts: number;
 }

@@ -4,7 +4,7 @@ import {
   InventoryItem, ItemStatus, SensitivityLevel, AuditLogEntry, ProductionRun,
   Vendor, PurchaseOrder, PurchaseOrderStatus, Invoice, InvoiceStatus, SalesOrder, SalesOrderStatus,
   SystemUser, UserRole, ProductionSchedule, CertificateOfConformance, ComplianceMode,
-  Capa, ValidationDoc, CalibrationItem, EnvironmentalLog
+  CAPAEntry, ValidationDocument, CalibrationRecord, EnvironmentalLog, FinancialKPI, OEEData
 } from '../types';
 
 export const INITIAL_INVENTORY: InventoryItem[] = [
@@ -241,25 +241,39 @@ export const generateCoC = (salesOrderId: string, mode: ComplianceMode = Complia
     };
 };
 
-export const INITIAL_CAPAS: Capa[] = [
-    { id: 'CAPA-101', description: 'Heat treat oven deviation', status: 'Closed' },
-    { id: 'CAPA-102', description: 'Material cert missing signature', status: 'Investigation' }
+export const INITIAL_CAPAS: CAPAEntry[] = [
+    { id: 'CAPA-101', description: 'Heat treat oven deviation', status: 'Closed', deviationType: 'Equipment', priority: 'Medium', createdBy: 'U-003' },
+    { id: 'CAPA-102', description: 'Material cert missing signature', status: 'Investigation', deviationType: 'Process', priority: 'High', createdBy: 'U-002' }
 ];
 
-export const INITIAL_VALIDATIONS: ValidationDoc[] = [
+export const INITIAL_VALIDATIONS: ValidationDocument[] = [
     { id: 'VAL-001', name: 'Autoclave Cycle B', type: 'PQ', status: 'Valid', nextReviewDate: '2025-01-15' },
     { id: 'VAL-002', name: 'Cleanroom HVAC', type: 'OQ', status: 'Review Needed', nextReviewDate: '2024-11-20' },
     { id: 'VAL-003', name: 'ERP E-Sig Module', type: 'IQ', status: 'Valid', nextReviewDate: '2025-06-01' }
 ];
 
-export const INITIAL_CALIBRATIONS: CalibrationItem[] = [
-    { id: 'CAL-991', instrumentId: 'Digital Caliper #44', nextCalibration: '2024-12-01', status: 'Valid' },
-    { id: 'CAL-992', instrumentId: 'Temp Sensor Z-1', nextCalibration: '2024-10-30', status: 'Expiring Soon' },
-    { id: 'CAL-993', instrumentId: 'Flow Meter FM-02', nextCalibration: '2025-03-15', status: 'Valid' }
+export const INITIAL_CALIBRATIONS: CalibrationRecord[] = [
+    { id: 'CAL-991', instrumentId: 'Digital Caliper #44', nextCalibration: '2024-12-01', lastCalibration: '2023-12-01', status: 'Valid' },
+    { id: 'CAL-992', instrumentId: 'Temp Sensor Z-1', nextCalibration: '2024-10-30', lastCalibration: '2023-10-30', status: 'Expiring Soon' },
+    { id: 'CAL-993', instrumentId: 'Flow Meter FM-02', nextCalibration: '2025-03-15', lastCalibration: '2024-03-15', status: 'Valid' }
 ];
 
 export const INITIAL_ENVIRONMENTAL_LOGS: EnvironmentalLog[] = [
-    { id: 'ENV-001', location: 'Cleanroom A', metric: 'Temp', value: '21.4°C', timestamp: new Date().toISOString(), alertLevel: 'Nominal' },
-    { id: 'ENV-002', location: 'Cleanroom A', metric: 'Humidity', value: '42%', timestamp: new Date().toISOString(), alertLevel: 'Nominal' },
-    { id: 'ENV-003', location: 'Storage B', metric: 'Temp', value: '18.1°C', timestamp: new Date().toISOString(), alertLevel: 'Warning' },
+    { id: 'ENV-001', location: 'Cleanroom A', sensorId: 'SENS-01', metric: 'Temp', value: '21.4°C', timestamp: new Date().toISOString(), alertLevel: 'Nominal' },
+    { id: 'ENV-002', location: 'Cleanroom A', sensorId: 'SENS-02', metric: 'Humidity', value: '42%', timestamp: new Date().toISOString(), alertLevel: 'Nominal' },
+    { id: 'ENV-003', location: 'Storage B', sensorId: 'SENS-03', metric: 'Temp', value: '18.1°C', timestamp: new Date().toISOString(), alertLevel: 'Warning' },
+];
+
+export const INITIAL_FINANCIAL_KPIS: FinancialKPI[] = [
+  { name: 'Gross Revenue (YTD)', value: 1250000, trend: '+12%', type: 'PL' },
+  { name: 'Cost of Goods (COGS)', value: 480000, trend: '-2%', type: 'PL' },
+  { name: 'Net Profit Margin', value: 24.5, trend: '+1.5%', type: 'PL' },
+  { name: 'Current Ratio', value: 1.8, trend: 'stable', type: 'BS' },
+  { name: 'Debt-to-Equity', value: 0.45, trend: '-0.05', type: 'BS' },
+];
+
+export const INITIAL_OEE_DATA: OEEData[] = [
+  { machineId: 'CNC-Lathe-A', availability: 92, performance: 88, quality: 99, status: 'Running', alerts: 0 },
+  { machineId: 'Milling-Center-5', availability: 45, performance: 0, quality: 0, status: 'Down', alerts: 3 },
+  { machineId: 'Assembly-Bot-2', availability: 98, performance: 95, quality: 99.5, status: 'Running', alerts: 0 },
 ];

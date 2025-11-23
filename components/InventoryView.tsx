@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { InventoryItem, ItemStatus, SensitivityLevel, SystemUser } from '../types.ts';
 import { StatusBadge, TacticalCard, Toast } from './Shared.tsx';
-import { Search, SlidersHorizontal, Sparkles, Plus, Edit3, X, MapPin, Zap, History } from 'lucide-react';
+import { Search, SlidersHorizontal, Sparkles, Plus, Edit3, X, MapPin, Zap, History, Upload, Tag, Download } from 'lucide-react';
 import { askTacticalAssistant } from '../services/geminiService.ts';
 import { telemetryService } from '../services/telemetryService.ts';
 import { BackendAPI } from '../services/backend/api.ts';
@@ -205,6 +205,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items, onRefresh, 
     const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
     const [historyLogs, setHistoryLogs] = useState<AuditLogEntry[]>([]);
 
+    // Bulk Import State
+    const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [importPreview, setImportPreview] = useState<any[]>([]);
+
     const showToast = (message: string, type: 'success' | 'error') => {
         setToast({ message, type });
     };
@@ -228,6 +233,160 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items, onRefresh, 
         // Cleanup subscription when modal closes is handled by the modal close logic effectively
         // but strictly we should unsubscribe. For this mock interaction, it's acceptable.
         return unsubscribe;
+    };
+
+    // Bulk Import Handler
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.name.endsWith('.csv')) {
+            showToast("Please upload a CSV file", 'error');
+            return;
+        }
+
+        setImportFile(file);
+
+        // Parse CSV for preview
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const text = event.target?.result as string;
+            const lines = text.split('\n').filter(line => line.trim());
+
+            if (lines.length < 2) {
+                showToast("CSV file is empty or invalid", 'error');
+                return;
+            }
+
+            // Parse header and data
+            const headers = lines[0].split(',').map(h => h.trim());
+            const preview = lines.slice(1, 6).map(line => {
+                const values = line.split(',').map(v => v.trim());
+                const item: any = {};
+                headers.forEach((header, idx) => {
+                    item[header] = values[idx] || '';
+                });
+                return item;
+            });
+
+            setImportPreview(preview);
+        };
+        reader.readAsText(file);
+    };
+
+    const handleBulkImport = async () => {
+        if (!importFile || importPreview.length === 0) {
+            showToast("No valid data to import", 'error');
+            return;
+        }
+
+        try {
+            // Parse full CSV
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const text = event.target?.result as string;
+                const lines = text.split('\n').filter(line => line.trim());
+                const headers = lines[0].split(',').map(h => h.trim());
+
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',').map(v => v.trim());
+                    const itemData: any = {};
+
+                    headers.forEach((header, idx) => {
+                        itemData[header] = values[idx] || '';
+                    });
+
+                    // Validate required fields
+                    if (!itemData.partNumber || !itemData.nomenclature) {
+                        errorCount++;
+                        continue;
+                    }
+
+                    try {
+                        await BackendAPI.addInventoryItem({
+                            partNumber: itemData.partNumber,
+                            nomenclature: itemData.nomenclature,
+                            serialNumber: itemData.serialNumber || `SN-${Date.now()}-${i}`,
+                            location: itemData.location || 'WH-A-01-01',
+                            quantity: parseInt(itemData.quantity) || 1,
+                            status: (itemData.status as ItemStatus) || ItemStatus.AVAILABLE,
+                            unitCost: parseFloat(itemData.unitCost) || 0,
+                            batchLot: itemData.batchLot || `LOT-IMPORT-${Date.now()}`,
+                            cageCode: itemData.cageCode || 'N/A',
+                            sensitivity: (itemData.sensitivity as SensitivityLevel) || SensitivityLevel.UNCLASSIFIED
+                        }, currentUser);
+                        successCount++;
+                    } catch (e) {
+                        errorCount++;
+                    }
+                }
+
+                showToast(`Import complete: ${successCount} items added, ${errorCount} errors`, successCount > 0 ? 'success' : 'error');
+                setShowBulkImportModal(false);
+                setImportFile(null);
+                setImportPreview([]);
+                onRefresh();
+            };
+            reader.readAsText(importFile);
+        } catch (e) {
+            showToast("Bulk import failed", 'error');
+        }
+    };
+
+    // Label Generation Handler
+    const handleGenerateLabel = (item: InventoryItem) => {
+        // Generate label content
+        const labelContent = `
+╔════════════════════════════════════╗
+║     INVENTORY ASSET LABEL          ║
+╠════════════════════════════════════╣
+║                                    ║
+║  Part Number: ${item.partNumber.padEnd(18)} ║
+║  Serial: ${(item.serialNumber || 'N/A').padEnd(23)} ║
+║  Location: ${item.location.padEnd(21)} ║
+║  Status: ${item.status.padEnd(23)} ║
+║  Batch: ${(item.batchLot || 'N/A').padEnd(24)} ║
+║                                    ║
+║  [QR CODE PLACEHOLDER]             ║
+║  Scan for full details             ║
+║                                    ║
+╠════════════════════════════════════╣
+║  Generated: ${new Date().toLocaleDateString().padEnd(18)} ║
+╚════════════════════════════════════╝
+        `;
+
+        // Create blob and download
+        const blob = new Blob([labelContent], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Label_${item.partNumber}_${item.serialNumber}.txt`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast(`Label generated for ${item.partNumber}`, 'success');
+    };
+
+    // Download CSV Template
+    const handleDownloadTemplate = () => {
+        const template = `partNumber,nomenclature,serialNumber,location,quantity,status,unitCost,batchLot,cageCode,sensitivity
+XB-70-TI,Thruster Nozzle,SN-2024-001,WH-A-01-01,10,AVAILABLE,1250.00,LOT-99812A,1A2B3,UNCLASSIFIED
+AC-20-AL,Actuator Assembly,SN-2024-002,WH-B-RACK-2,5,AVAILABLE,850.00,LOT-99813B,2C3D4,CUI`;
+
+        const blob = new Blob([template], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'inventory_import_template.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast("Template downloaded", 'success');
     };
 
     // Real-time Subscription
@@ -331,6 +490,113 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items, onRefresh, 
 
             {/* Inventory Form Modal */}
             {isModalOpen && <InventoryForm onClose={handleCloseModal} itemToEdit={itemToEdit} onRefresh={onRefresh} currentUser={currentUser} showToast={showToast} />}
+
+            {/* Bulk Import Modal */}
+            {showBulkImportModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-[2rem] shadow-2xl p-6 md:p-8 border border-gray-100 max-w-3xl w-full animate-in fade-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-2xl font-display font-bold text-gray-900">Bulk Import Inventory</h3>
+                                <p className="text-sm text-gray-500 mt-1">Upload a CSV file to add multiple items</p>
+                            </div>
+                            <button onClick={() => {
+                                setShowBulkImportModal(false);
+                                setImportFile(null);
+                                setImportPreview([]);
+                            }} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors">
+                                <X size={20} className="text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            {/* Template Download */}
+                            <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl">
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <p className="text-sm font-bold text-blue-900 mb-1">Need a template?</p>
+                                        <p className="text-xs text-blue-700">Download our CSV template with example data</p>
+                                    </div>
+                                    <button
+                                        onClick={handleDownloadTemplate}
+                                        className="flex items-center gap-2 px-3 py-2 bg-white text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
+                                    >
+                                        <Download size={14} />
+                                        Template
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* File Upload */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                                    Upload CSV File
+                                </label>
+                                <input
+                                    type="file"
+                                    accept=".csv"
+                                    onChange={handleFileUpload}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                                />
+                            </div>
+
+                            {/* Preview */}
+                            {importPreview.length > 0 && (
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                                        Preview (First 5 rows)
+                                    </label>
+                                    <div className="overflow-x-auto bg-gray-50 rounded-xl p-4">
+                                        <table className="w-full text-xs">
+                                            <thead>
+                                                <tr className="border-b border-gray-200">
+                                                    <th className="text-left pb-2 pr-4">Part Number</th>
+                                                    <th className="text-left pb-2 pr-4">Nomenclature</th>
+                                                    <th className="text-left pb-2 pr-4">Serial</th>
+                                                    <th className="text-left pb-2 pr-4">Location</th>
+                                                    <th className="text-left pb-2">Qty</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {importPreview.map((item, idx) => (
+                                                    <tr key={idx} className="border-b border-gray-100">
+                                                        <td className="py-2 pr-4 font-mono">{item.partNumber}</td>
+                                                        <td className="py-2 pr-4">{item.nomenclature}</td>
+                                                        <td className="py-2 pr-4 font-mono text-gray-500">{item.serialNumber}</td>
+                                                        <td className="py-2 pr-4">{item.location}</td>
+                                                        <td className="py-2">{item.quantity}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Actions */}
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    onClick={handleBulkImport}
+                                    disabled={!importFile || importPreview.length === 0}
+                                    className="flex-1 py-3.5 bg-black text-white rounded-2xl font-bold shadow-key hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Import {importPreview.length > 0 ? `${importPreview.length}+` : ''} Items
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowBulkImportModal(false);
+                                        setImportFile(null);
+                                        setImportPreview([]);
+                                    }}
+                                    className="flex-1 py-3.5 bg-gray-50 text-gray-900 rounded-2xl font-bold hover:bg-gray-100 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Toast Notification */}
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -442,11 +708,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items, onRefresh, 
                                             <History size={16} strokeWidth={2.5} />
                                         </button>
                                         <button
+                                            onClick={() => handleGenerateLabel(item)}
+                                            className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors ml-2"
+                                            title="Generate Label"
+                                        >
+                                            <Tag size={16} strokeWidth={2.5} />
+                                        </button>
+                                        <button
                                             onClick={() => {
                                                 setItemToEdit(item);
                                                 setIsModalOpen(true);
                                             }}
-                                            className="p-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                                            className="p-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors ml-2"
                                             title="Edit Item"
                                         >
                                             <Edit3 size={16} strokeWidth={2.5} />

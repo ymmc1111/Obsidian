@@ -95,8 +95,8 @@ This document outlines all the core functions users should be able to perform in
 | Adjust Quantity | ✅ | Logistics Specialist, Admin | Increase/decrease quantity for cycle counts | Reconcile physical vs. system inventory |
 | Change Status | ✅ | Quality Inspector, Admin | Update status (Available → Quarantine → Scrap) | Manage quality holds |
 | View Item History | ✅ | All | See audit trail of all changes (location, quantity, status) | Track custody and compliance |
-| Bulk Import | 📋 | Admin, Logistics Specialist | Upload CSV/Excel to add or update multiple items | Efficient onboarding |
-| Generate Labels | 📋 | Logistics Specialist | Print barcode/QR labels for items | Enable scanning and tracking |
+| Bulk Import | ✅ | Admin, Logistics Specialist | Upload CSV/Excel to add or update multiple items | Efficient onboarding |
+| Generate Labels | ✅ | Logistics Specialist | Print barcode/QR labels for items | Enable scanning and tracking |
 
 ### 3. Production (Shop Floor & Travelers)
 | Function | Status | User Roles | Action | Goal |

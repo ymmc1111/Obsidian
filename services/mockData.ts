@@ -325,3 +325,6 @@ export const INITIAL_OEE_DATA: OEEData[] = [
   { machineId: 'Milling-Center-5', availability: 45, performance: 0, quality: 0, status: 'Down', alerts: 3 },
   { machineId: 'Assembly-Bot-2', availability: 98, performance: 95, quality: 99.5, status: 'Running', alerts: 0 },
 ];
+
+// Phase 3 Additions for ProcurementView Form
+export const MOCK_PART_NUMBERS = ['XB-70-TI', 'GUID-SYS-V4', 'THRUSTER-NZL-09', 'ELEC-CTRL-PCB', 'FRAME-ASSY-S2'];

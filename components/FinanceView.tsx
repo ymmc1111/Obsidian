@@ -1,17 +1,17 @@
-
 import React, { useState, useEffect } from 'react';
 import { INITIAL_VENDORS } from '../services/mockData';
 import { BackendAPI } from '../services/backend/api';
 import { TacticalCard, StatWidget, StatusBadge } from './Shared';
 import { DollarSign, Clock, Lock, TrendingUp, Check, AlertTriangle, ArrowUpRight, ArrowDownRight, PieChart, Scale } from 'lucide-react';
-import { Invoice, InvoiceStatus, ComplianceMode, FinancialKPI } from '../types';
+import { Invoice, InvoiceStatus, ComplianceMode, FinancialKPI, SystemUser } from '../types';
 import { telemetryService } from '../services/telemetryService';
 
 interface FinanceViewProps {
     complianceMode: ComplianceMode;
+    currentUser: SystemUser | null;
 }
 
-export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode }) => {
+export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode, currentUser }) => {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [financialKPIs, setFinancialKPIs] = useState<FinancialKPI[]>([]);
 
@@ -34,31 +34,40 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode }) => {
 
     // Actions
     const approveInvoice = async (id: string) => {
+        // C. Approve Invoice
         // Optimistic Update
         setInvoices(prev => prev.map(inv =>
             inv.id === id ? { ...inv, status: InvoiceStatus.APPROVED } : inv
         ));
 
         try {
-            await BackendAPI.updateInvoiceStatus(id, InvoiceStatus.APPROVED);
+            await BackendAPI.updateInvoiceStatus(id, InvoiceStatus.APPROVED, currentUser);
             // Record KPI: AP Approval
             telemetryService.incrementCounter('ap_approval_count', { invoice_id: id });
         } catch (e) {
             console.error("Approval failed", e);
             // In real app, revert state here
+            setInvoices(prev => prev.map(inv =>
+                inv.id === id ? { ...inv, status: InvoiceStatus.PENDING } : inv
+            ));
         }
     };
 
     const flagInvoice = async (id: string) => {
-        // Optimistic Update
+        // D. Flag Invoice
+        // Optimistic Update: Change status to OVERDUE for a Flag action
         setInvoices(prev => prev.map(inv =>
             inv.id === id ? { ...inv, status: InvoiceStatus.OVERDUE } : inv
         ));
 
         try {
-            await BackendAPI.updateInvoiceStatus(id, InvoiceStatus.OVERDUE);
+            await BackendAPI.updateInvoiceStatus(id, InvoiceStatus.OVERDUE, currentUser);
         } catch (e) {
             console.error("Flagging failed", e);
+            // In real app, revert state here
+            setInvoices(prev => prev.map(inv =>
+                inv.id === id ? { ...inv, status: InvoiceStatus.PENDING } : inv
+            ));
         }
     };
 
@@ -233,14 +242,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode }) => {
                                                         <button
                                                             onClick={() => approveInvoice(inv.id)}
                                                             className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
-                                                            title="Approve"
+                                                            title="Approve (C)"
                                                         >
                                                             <Check size={16} strokeWidth={3} />
                                                         </button>
                                                         <button
                                                             onClick={() => flagInvoice(inv.id)}
                                                             className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                                                            title="Flag Overdue"
+                                                            title="Flag Overdue (D)"
                                                         >
                                                             <AlertTriangle size={16} strokeWidth={2.5} />
                                                         </button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { InventoryItem, ItemStatus, SensitivityLevel } from '../types.ts';
+import { InventoryItem, ItemStatus, SensitivityLevel, SystemUser } from '../types.ts';
 import { StatusBadge, TacticalCard } from './Shared.tsx';
 import { Search, SlidersHorizontal, Sparkles, Plus, Edit3, X, MapPin, Zap } from 'lucide-react';
 import { askTacticalAssistant } from '../services/geminiService.ts';
@@ -12,9 +12,10 @@ interface InventoryFormProps {
     onClose: () => void;
     itemToEdit: InventoryItem | null;
     onRefresh: () => void; // New prop for refreshing parent state
+    currentUser: SystemUser | null;
 }
 
-const InventoryForm: React.FC<InventoryFormProps> = ({ onClose, itemToEdit, onRefresh }) => {
+const InventoryForm: React.FC<InventoryFormProps> = ({ onClose, itemToEdit, onRefresh, currentUser }) => {
     const isEdit = !!itemToEdit;
     const [partNumber, setPartNumber] = useState(itemToEdit?.partNumber || '');
     const [nomenclature, setNomenclature] = useState(itemToEdit?.nomenclature || '');
@@ -53,10 +54,10 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ onClose, itemToEdit, onRe
         try {
             if (isEdit) {
                 // D. Change Location / Update Status
-                await BackendAPI.updateInventoryItem(itemToEdit.id, itemData);
+                await BackendAPI.updateInventoryItem(itemToEdit.id, itemData, currentUser);
             } else {
                 // C. Add New Asset
-                await BackendAPI.addInventoryItem(itemData);
+                await BackendAPI.addInventoryItem(itemData, currentUser);
             }
             // Trigger refresh in parent (App.tsx)
             onRefresh();
@@ -144,9 +145,10 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ onClose, itemToEdit, onRe
 interface InventoryViewProps {
     items: InventoryItem[];
     onRefresh: () => void; // New prop for refreshing data
+    currentUser: SystemUser | null;
 }
 
-export const InventoryView: React.FC<InventoryViewProps> = ({ items, onRefresh }) => {
+export const InventoryView: React.FC<InventoryViewProps> = ({ items, onRefresh, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -246,7 +248,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items, onRefresh }
         <div className="h-full flex flex-col bg-white">
 
             {/* Inventory Form Modal */}
-            {isModalOpen && <InventoryForm onClose={handleCloseModal} itemToEdit={itemToEdit} onRefresh={onRefresh} />}
+            {isModalOpen && <InventoryForm onClose={handleCloseModal} itemToEdit={itemToEdit} onRefresh={onRefresh} currentUser={currentUser} />}
 
             {/* Toolbar */}
             <div className="px-4 py-4 md:px-8 md:py-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between shrink-0 border-b border-gray-50">

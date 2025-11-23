@@ -3,15 +3,15 @@ import { BackendAPI } from '../services/backend/api.ts';
 import { TacticalCard, StatusBadge } from './Shared.tsx';
 import { Zap, AlertCircle, PenTool, X, Plus, Edit3, Trash2 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend, Cell } from 'recharts';
-import { ComplianceMode, ProductionSchedule, CalibrationRecord } from '../types.ts';
+import { ComplianceMode, ProductionSchedule, CalibrationRecord, SystemUser } from '../types.ts';
 
 // Mock data for dropdowns (should eventually be API calls)
 const MACHINE_CENTERS = ['CNC-Lathe-A', 'Assembly-Cleanroom', 'Cutting-Bay-1', '3D-Print-Metal', 'Laser-Engrave-B'];
 const PART_NUMBERS = ['XB-70-TI', 'GUID-SYS-V4', 'THRUSTER-NZL-09', 'ELEC-CTRL-PCB', 'FRAME-ASSY-S2'];
-const STATUS_OPTIONS = ['Scheduled', 'In Progress', 'Delayed'];
+const STATUS_OPTIONS = ['Scheduled', 'In Progress', 'Delayed', 'Completed'];
 
 // --- Schedule Form Component (Modal) ---
-const ScheduleForm = ({ onClose, scheduleToEdit }: { onClose: () => void, scheduleToEdit: ProductionSchedule | null }) => {
+const ScheduleForm = ({ onClose, scheduleToEdit, currentUser }: { onClose: () => void, scheduleToEdit: ProductionSchedule | null, currentUser: SystemUser | null }) => {
    const isEdit = !!scheduleToEdit;
    const [partNumber, setPartNumber] = useState(scheduleToEdit?.partNumber || PART_NUMBERS[0]);
    const [machineCenter, setMachineCenter] = useState(scheduleToEdit?.machineCenter || MACHINE_CENTERS[0]);
@@ -40,15 +40,14 @@ const ScheduleForm = ({ onClose, scheduleToEdit }: { onClose: () => void, schedu
 
       try {
          if (isEdit && scheduleToEdit) {
-            // Update existing schedule
-            await BackendAPI.updateProductionSchedule(scheduleToEdit.id, scheduleData);
+            // E. Edit Schedule Details / Update Status
+            await BackendAPI.updateProductionSchedule(scheduleToEdit.id, scheduleData, currentUser);
          } else {
-            // Create new schedule
-            // Add a mock loadFactor (realistically calculated by backend, but needed for the UI type)
+            // C. Create Schedule
             await BackendAPI.addProductionSchedule({
                ...scheduleData,
                loadFactor: 0 // Will be set by Firestore seed/update if not sent
-            });
+            }, currentUser);
          }
          onClose();
       } catch (e) {
@@ -63,7 +62,7 @@ const ScheduleForm = ({ onClose, scheduleToEdit }: { onClose: () => void, schedu
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/60 backdrop-blur-sm">
          <div className="bg-white rounded-[2rem] shadow-2xl p-8 border border-gray-100 max-w-lg w-full animate-in fade-in zoom-in-95 duration-300">
             <div className="flex justify-between items-center mb-6">
-               <h3 className="text-2xl font-display font-bold text-gray-900">{isEdit ? `Edit Schedule: ${scheduleToEdit?.id}` : 'Create New Production Schedule'}</h3>
+               <h3 className="text-2xl font-display font-bold text-gray-900">{isEdit ? `Edit Schedule: ${scheduleToEdit?.id}` : 'Create New Production Schedule (C)'}</h3>
                <button onClick={onClose} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors">
                   <X size={20} className="text-gray-500" />
                </button>
@@ -101,7 +100,7 @@ const ScheduleForm = ({ onClose, scheduleToEdit }: { onClose: () => void, schedu
                </div>
                {/* Status */}
                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Status</label>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Status (D. Update Status)</label>
                   <select value={status} onChange={(e) => setStatus(e.target.value)}
                      className="w-full bg-gray-50 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none" disabled={loading} >
                      {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -116,7 +115,7 @@ const ScheduleForm = ({ onClose, scheduleToEdit }: { onClose: () => void, schedu
                disabled={loading}
                className="w-full mt-8 py-4 bg-black text-white rounded-2xl font-bold shadow-key hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-               {loading ? <Zap size={20} className="animate-spin" /> : (isEdit ? 'Save Changes' : 'Create Schedule')}
+               {loading ? <Zap size={20} className="animate-spin" /> : (isEdit ? 'Save Changes (E)' : 'Create Schedule (C)')}
             </button>
          </div>
       </div>
@@ -135,9 +134,10 @@ const FORECAST_DATA = [
 
 interface PlanningViewProps {
    complianceMode?: ComplianceMode;
+   currentUser: SystemUser | null;
 }
 
-export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode }) => {
+export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode, currentUser }) => {
    const isPharmaMode = complianceMode === ComplianceMode.PHARMA_US || complianceMode === ComplianceMode.PHARMA_EU;
 
    const [schedules, setSchedules] = useState<ProductionSchedule[]>([]);
@@ -176,6 +176,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode }) =>
    };
 
    const handleDelete = useCallback(async (scheduleId: string, partNumber: string) => {
+      // F. Delete Schedule
       // Use custom modal for confirmation instead of alert/confirm
       if (!window.confirm(`SECURITY WARNING: Are you sure you want to delete schedule ${scheduleId} (${partNumber})? This action is logged.`)) {
          return;
@@ -183,13 +184,13 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode }) =>
 
       try {
          // We are deliberately calling the exposed API endpoint here
-         await BackendAPI.deleteProductionSchedule(scheduleId);
+         await BackendAPI.deleteProductionSchedule(scheduleId, currentUser);
          // Firestore subscription handles the UI update automatically
       } catch (e) {
          console.error("Failed to delete schedule:", e);
          alert("Failed to delete schedule. Check console for details.");
       }
-   }, []);
+   }, [currentUser]);
 
 
    const ganttData = schedules.map(sch => {
@@ -227,7 +228,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode }) =>
       <div className="h-full flex flex-col bg-white p-4 md:p-8 gap-4 md:gap-6 overflow-y-auto">
 
          {/* Schedule Form Modal */}
-         {isModalOpen && <ScheduleForm onClose={handleCloseModal} scheduleToEdit={scheduleToEdit} />}
+         {isModalOpen && <ScheduleForm onClose={handleCloseModal} scheduleToEdit={scheduleToEdit} currentUser={currentUser} />}
 
          {/* Top: Gantt Timeline */}
          <TacticalCard
@@ -244,7 +245,10 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode }) =>
             }
          >
             <div className="text-sm text-gray-400 mb-2">
+
+
                [Image of Production Planning Gantt Chart]
+
             </div>
             <div className="flex items-center gap-4 mb-4 text-xs font-medium text-gray-500">
                <div className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-900 rounded-sm"></div>Scheduled / Completed</div>
@@ -411,14 +415,14 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode }) =>
                                  <button
                                     onClick={() => handleOpenEdit(sch)}
                                     className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 transition-colors opacity-0 group-hover:opacity-100"
-                                    title="Edit Schedule"
+                                    title="Edit Schedule (E)"
                                  >
                                     <Edit3 size={16} />
                                  </button>
                                  <button
                                     onClick={() => handleDelete(sch.id, sch.partNumber)}
                                     className="p-1.5 rounded-lg text-red-500 hover:bg-red-100 transition-colors opacity-0 group-hover:opacity-100"
-                                    title="Delete Schedule"
+                                    title="Delete Schedule (F)"
                                  >
                                     <Trash2 size={16} />
                                  </button>

@@ -1,5 +1,5 @@
 import { db } from './db';
-import { AuditLogEntry, InvoiceStatus, SystemUser, ProductionSchedule, InventoryItem, ItemStatus, SensitivityLevel, CalibrationRecord } from '../../types.ts';
+import { AuditLogEntry, InvoiceStatus, SystemUser, ProductionSchedule, InventoryItem, ItemStatus, SensitivityLevel, CalibrationRecord, Vendor, PurchaseOrder, PurchaseOrderStatus } from '../../types.ts';
 import { MOCK_TRAVELER, INITIAL_USERS } from '../mockData.ts';
 import { initializeFirebase, subscribeToSchedules, addProductionSchedule, updateProductionSchedule, deleteProductionSchedule, getCalibrations } from '../firebaseProductionService.ts';
 
@@ -9,6 +9,9 @@ initializeFirebase().then(userId => {
 }).catch(err => {
   console.error("[Firebase] Initialization failed:", err);
 });
+
+// Helper to determine the actor for audit logs, defaults to SYSTEM_API if no user is passed
+const getActor = (user?: SystemUser | null) => user ? `${user.name} (${user.id})` : 'SYSTEM_API';
 
 // Mock Backend API Service
 // Simulates a Node.js/Express application structure
@@ -184,7 +187,7 @@ export const BackendAPI = {
   },
 
   // Endpoint: POST /api/v1/inventory/add (Phase 2: Add New Asset)
-  addInventoryItem: async (itemData: Omit<InventoryItem, 'id'>): Promise<InventoryItem> => {
+  addInventoryItem: async (itemData: Omit<InventoryItem, 'id'>, actor?: SystemUser | null): Promise<InventoryItem> => {
     await new Promise(resolve => setTimeout(resolve, 300));
     const newId = `INV-${Date.now()}`;
     const newDbItem = {
@@ -205,7 +208,7 @@ export const BackendAPI = {
     // Log the receiving action
     BackendAPI.ingestAuditLog({
       timestamp: new Date().toISOString(),
-      actor: 'J. Doe (U-001)', // TODO: Use actual current user
+      actor: getActor(actor),
       action: 'INVENTORY_RECEIVING',
       details: `Received ${itemData.quantity} units of ${itemData.partNumber} (${newId}).`,
       hash: '0xmockhash'
@@ -215,7 +218,7 @@ export const BackendAPI = {
   },
 
   // Endpoint: PATCH /api/v1/inventory/:id (Phase 2: Update Item)
-  updateInventoryItem: async (id: string, updates: Partial<InventoryItem>): Promise<InventoryItem> => {
+  updateInventoryItem: async (id: string, updates: Partial<InventoryItem>, actor?: SystemUser | null): Promise<InventoryItem> => {
     await new Promise(resolve => setTimeout(resolve, 300));
     const index = db.tbl_inventory.findIndex(i => i.id === id);
 
@@ -250,7 +253,7 @@ export const BackendAPI = {
     // Log the update action
     BackendAPI.ingestAuditLog({
       timestamp: new Date().toISOString(),
-      actor: 'J. Doe (U-001)', // TODO: Use actual current user
+      actor: getActor(actor),
       action: 'INVENTORY_UPDATE',
       details: logMessage,
       hash: '0xmockhash'
@@ -289,12 +292,23 @@ export const BackendAPI = {
     return db.tbl_invoices;
   },
 
-  updateInvoiceStatus: async (id: string, status: InvoiceStatus) => {
+  // NEW: Added actor to updateInvoiceStatus for audit logging
+  updateInvoiceStatus: async (id: string, status: InvoiceStatus, actor?: SystemUser | null) => {
     await new Promise(resolve => setTimeout(resolve, 600));
     const invoice = db.tbl_invoices.find(i => i.id === id);
     if (invoice) {
+      const originalStatus = invoice.status;
       invoice.status = status;
-      // Log this action?
+
+      // Log the action to the immutable audit trail
+      BackendAPI.ingestAuditLog({
+        timestamp: new Date().toISOString(),
+        actor: getActor(actor),
+        action: 'INVOICE_STATUS_UPDATE',
+        details: `Invoice ${id} status changed from ${originalStatus} to ${status}.`,
+        hash: '0xmockhash'
+      });
+
       return { status: 200, message: "Updated" };
     }
     throw new Error("Invoice not found");
@@ -327,12 +341,12 @@ export const BackendAPI = {
     });
   },
 
-  // Expose Firestore CRUD functions via BackendAPI (Phase 1 Completion)
-  addProductionSchedule: async (schedule: Omit<ProductionSchedule, 'id' | 'loadFactor'> & { loadFactor: number }): Promise<string> => {
+  // Expose Firestore CRUD functions via BackendAPI (Phase 1 Completion) - Added actor
+  addProductionSchedule: async (schedule: Omit<ProductionSchedule, 'id' | 'loadFactor'> & { loadFactor: number }, actor?: SystemUser | null): Promise<string> => {
     // Add audit log entry for the operation (optional, but good practice for compliance)
     BackendAPI.ingestAuditLog({
       timestamp: new Date().toISOString(),
-      actor: 'Planning User',
+      actor: getActor(actor),
       action: 'SCHEDULE_CREATED',
       details: `Created new schedule for ${schedule.partNumber} on ${schedule.machineCenter}.`,
       hash: '0xmockhash'
@@ -340,11 +354,12 @@ export const BackendAPI = {
     return addProductionSchedule(schedule);
   },
 
-  updateProductionSchedule: async (id: string, updates: Partial<ProductionSchedule>): Promise<void> => {
+  // Added actor
+  updateProductionSchedule: async (id: string, updates: Partial<ProductionSchedule>, actor?: SystemUser | null): Promise<void> => {
     // Add audit log entry for the operation
     BackendAPI.ingestAuditLog({
       timestamp: new Date().toISOString(),
-      actor: 'Planning User',
+      actor: getActor(actor),
       action: 'SCHEDULE_UPDATED',
       details: `Updated schedule ${id}. Status: ${updates.status || 'N/A'}.`,
       hash: '0xmockhash'
@@ -352,11 +367,12 @@ export const BackendAPI = {
     return updateProductionSchedule(id, updates);
   },
 
-  deleteProductionSchedule: async (id: string): Promise<void> => {
+  // Added actor
+  deleteProductionSchedule: async (id: string, actor?: SystemUser | null): Promise<void> => {
     // Add audit log entry for the operation
     BackendAPI.ingestAuditLog({
       timestamp: new Date().toISOString(),
-      actor: 'Planning User',
+      actor: getActor(actor),
       action: 'SCHEDULE_DELETED',
       details: `Deleted schedule ${id}.`,
       hash: '0xmockhash'
@@ -368,6 +384,67 @@ export const BackendAPI = {
     await new Promise(resolve => setTimeout(resolve, 400));
     // Use the mock data getter from firebaseProductionService.ts
     return getCalibrations();
+  },
+
+  // --- Procurement Endpoints (Phase 3) ---
+
+  // Endpoint: GET /api/v1/procurement/vendors
+  getVendors: async (): Promise<Vendor[]> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return db.tbl_vendors;
+  },
+
+  // Endpoint: PATCH /api/v1/procurement/vendors/:id/status (H. Vendor Management) - Added actor
+  updateVendorStatus: async (id: string, status: 'Active' | 'On Hold', actor?: SystemUser | null): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    const vendor = db.tbl_vendors.find(v => v.id === id);
+    if (!vendor) throw new Error("Vendor not found.");
+
+    const originalStatus = vendor.status;
+    vendor.status = status;
+
+    // Log the action to the immutable audit trail
+    BackendAPI.ingestAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: getActor(actor),
+      action: 'VENDOR_STATUS_CHANGE',
+      details: `Vendor ${vendor.name} status changed from ${originalStatus} to ${status}.`,
+      hash: '0xmockhash'
+    });
+  },
+
+  // Endpoint: GET /api/v1/procurement/pos
+  getPurchaseOrders: async (): Promise<PurchaseOrder[]> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return db.tbl_purchase_orders;
+  },
+
+  // Endpoint: POST /api/v1/procurement/pos (F. Create Purchase Order) - Added actor
+  createPurchaseOrder: async (poData: { vendorId: string, items: { partNumber: string, qty: number, unitCost: number }[] }, actor?: SystemUser | null): Promise<PurchaseOrder> => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const totalAmount = poData.items.reduce((sum, item) => sum + (item.qty * item.unitCost), 0);
+    const newPO: PurchaseOrder = {
+      id: `PO-NEW-${Date.now()}`,
+      vendorId: poData.vendorId,
+      date: new Date().toISOString(),
+      totalAmount: totalAmount,
+      status: PurchaseOrderStatus.SENT,
+      items: poData.items
+    };
+
+    db.tbl_purchase_orders.unshift(newPO); // Add to the mock DB
+
+    // Log the creation action
+    BackendAPI.ingestAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: getActor(actor),
+      action: 'PO_CREATED',
+      details: `Created new PO ${newPO.id} for $${newPO.totalAmount.toFixed(2)}. Sent to vendor ${poData.vendorId}.`,
+      hash: '0xmockhash'
+    });
+
+    return newPO;
   },
 
   // --- Phase 2: Traceability ---

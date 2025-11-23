@@ -398,16 +398,16 @@ const App: React.FC = () => {
           {/* Content Area */}
           <div className="flex-1 overflow-auto bg-white relative">
             {currentView === View.DASHBOARD && <Dashboard complianceMode={activeComplianceMode} />}
-            {currentView === View.INVENTORY && <InventoryView items={inventory} onRefresh={refreshInventory} />}
+            {currentView === View.INVENTORY && <InventoryView items={inventory} onRefresh={refreshInventory} currentUser={currentUser} />}
             {currentView === View.SHOP_FLOOR && traveler && <ShopFloorView userRole={currentUserRole} traveler={traveler} />}
             {currentView === View.TRACEABILITY && <TraceView currentUserRole={currentUserRole} />}
             {currentView === View.MANUFACTURING && traveler && <TravelerView traveler={traveler} complianceMode={activeComplianceMode} />}
-            {currentView === View.PROCUREMENT && <ProcurementView />}
-            {currentView === View.FINANCE && <FinanceView complianceMode={activeComplianceMode} />}
+            {currentView === View.PROCUREMENT && <ProcurementView currentUser={currentUser} />}
+            {currentView === View.FINANCE && <FinanceView complianceMode={activeComplianceMode} currentUser={currentUser} />}
             {currentView === View.ORDERS && <OrdersView complianceMode={activeComplianceMode} />}
-            {currentView === View.PLANNING && <PlanningView complianceMode={activeComplianceMode} />}
+            {currentView === View.PLANNING && <PlanningView complianceMode={activeComplianceMode} currentUser={currentUser} />}
             {currentView === View.LOGISTICS && <LogisticsView complianceMode={activeComplianceMode} />}
-            {currentView === View.ADMIN && <AdminView activeMode={activeComplianceMode} setMode={setActiveComplianceMode} />}
+            {currentView === View.ADMIN && <AdminView activeMode={activeComplianceMode} setMode={setActiveComplianceMode} currentUser={currentUser} />}
           </div>
 
           {/* Live Audit Ticker (Bottom) */}

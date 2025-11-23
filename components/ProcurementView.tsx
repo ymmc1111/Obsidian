@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BackendAPI } from '../services/backend/api.ts'; // Added .ts extension
-import { StatusBadge, TacticalCard } from './Shared.tsx'; // Added .tsx extension
+import { BackendAPI } from '../services/backend/api.ts';
+import { StatusBadge, TacticalCard } from './Shared.tsx';
 import { ShieldCheck, ArrowRight, AlertTriangle, CheckCircle, RefreshCw, Plus, X, Package, DollarSign } from 'lucide-react';
-import { PurchaseOrder, Vendor, PurchaseOrderStatus } from '../types.ts';
+import { PurchaseOrder, Vendor, PurchaseOrderStatus, SystemUser } from '../types.ts';
 import { MOCK_PART_NUMBERS } from '../services/mockData.ts';
 
 // --- Purchase Order Form Component (Modal) ---
@@ -10,9 +10,10 @@ interface POFormProps {
    onClose: () => void;
    vendors: Vendor[];
    onNewPO: (newPO: PurchaseOrder) => void;
+   currentUser: SystemUser | null;
 }
 
-const POForm: React.FC<POFormProps> = ({ onClose, vendors, onNewPO }) => {
+const POForm: React.FC<POFormProps> = ({ onClose, vendors, onNewPO, currentUser }) => {
    const [vendorId, setVendorId] = useState(vendors[0]?.id || '');
    const [partNumber, setPartNumber] = useState(MOCK_PART_NUMBERS[0]);
    const [qty, setQty] = useState('100');
@@ -39,7 +40,8 @@ const POForm: React.FC<POFormProps> = ({ onClose, vendors, onNewPO }) => {
             }]
          };
 
-         const newPO = await BackendAPI.createPurchaseOrder(poData);
+         // F. Create Purchase Order - Passed currentUser
+         const newPO = await BackendAPI.createPurchaseOrder(poData, currentUser);
          onNewPO(newPO);
          onClose();
       } catch (e) {
@@ -114,20 +116,43 @@ const POForm: React.FC<POFormProps> = ({ onClose, vendors, onNewPO }) => {
 };
 // --- End PO Form Component ---
 
+interface ProcurementViewProps {
+   currentUser: SystemUser | null; // Added currentUser prop
+}
 
-export const ProcurementView: React.FC = () => {
+export const ProcurementView: React.FC<ProcurementViewProps> = ({ currentUser }) => {
    const [vendors, setVendors] = useState<Vendor[]>([]);
    const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
    const [resolvingId, setResolvingId] = useState<string | null>(null);
    const [isPOModalOpen, setIsPOModalOpen] = useState(false);
+   const [isLoading, setIsLoading] = useState(true); // Added explicit loading state
 
-   // Initial Data Load (Decouple from mockData)
+   // Initial Data Load (Fixes the hang by ensuring try...catch)
    useEffect(() => {
-      BackendAPI.getVendors().then(setVendors);
-      BackendAPI.getPurchaseOrders().then(setPurchaseOrders);
-   }, []);
+      const loadProcurementData = async () => {
+         try {
+            // Ensure both promises are handled together
+            const [vendorData, poData] = await Promise.all([
+               BackendAPI.getVendors(),
+               BackendAPI.getPurchaseOrders()
+            ]);
+            setVendors(vendorData);
+            setPurchaseOrders(poData);
+         } catch (e) {
+            console.error("Failed to load procurement data (Vendors or POs):", e);
+            // CRITICAL FIX: Set state to empty arrays on failure 
+            // to exit the initial loading screen and prevent hang.
+            setVendors([]);
+            setPurchaseOrders([]);
+            // Optionally alert the user that mock data could not be loaded
+         } finally {
+            setIsLoading(false); // Guarantees the component will render
+         }
+      };
+      loadProcurementData();
+   }, []); // Empty dependency array means it runs once on mount
 
-   // Update PO list after creation
+   // Update PO list after creation (F)
    const handleNewPO = useCallback((newPO: PurchaseOrder) => {
       setPurchaseOrders(prev => [newPO, ...prev]);
    }, []);
@@ -136,7 +161,9 @@ export const ProcurementView: React.FC = () => {
    const toggleVendorStatus = async (id: string, currentStatus: 'Active' | 'On Hold') => {
       const newStatus = currentStatus === 'Active' ? 'On Hold' : 'Active';
       try {
-         await BackendAPI.updateVendorStatus(id, newStatus);
+         // Passed currentUser to updateVendorStatus
+         await BackendAPI.updateVendorStatus(id, newStatus, currentUser);
+         // Optimistic UI Update (API has the logic to log the audit trail)
          setVendors(prev => prev.map(v =>
             v.id === id ? { ...v, status: newStatus } : v
          ));
@@ -146,7 +173,7 @@ export const ProcurementView: React.FC = () => {
       }
    };
 
-   // Mock logic for 3-Way Match
+   // Mock logic for 3-Way Match (I)
    const getMatchStatus = (id: string) => {
       if (id === 'PO-2024-001') return 'Complete';
       if (id === 'PO-2024-002') return 'Pending';
@@ -159,19 +186,29 @@ export const ProcurementView: React.FC = () => {
    // I. Resolve Mismatch Action
    const resolveMatch = (id: string) => {
       setResolvingId(id);
-      // Simulate API call
+      // Simulate API call and final confirmation
       setTimeout(() => {
          setResolvingId(null);
          alert(`Discrepancy for ${id} has been flagged for manual override. Audit Log updated.`);
-         // In a real app, this would update the Receiving Slip or Invoice to match, which triggers an audit log.
+         // In a real app, this would trigger an update to the underlying Receiving/Invoice data.
       }, 1000);
    };
 
-   if (!vendors.length) {
+   // Renders the loading screen while data is being fetched
+   if (isLoading) {
       return (
          <div className="flex items-center justify-center h-full text-gray-500">Loading Procurement Data...</div>
       );
    }
+
+   // CRITICAL FIX: Explicit check for null/undefined 'vendors' to fix the TypeError: Cannot read properties of undefined (reading 'length')
+   // This is the correct guard once isLoading is false.
+   if (!vendors || vendors.length === 0) {
+      return (
+         <div className="flex items-center justify-center h-full text-gray-500">No Vendor Data Available. Please check system health.</div>
+      );
+   }
+
 
    return (
       <div className="h-full flex flex-col bg-white p-4 md:p-8 gap-4 md:gap-6 overflow-y-auto">
@@ -182,6 +219,7 @@ export const ProcurementView: React.FC = () => {
                onClose={() => setIsPOModalOpen(false)}
                vendors={vendors}
                onNewPO={handleNewPO}
+               currentUser={currentUser} // Passed currentUser prop
             />
          )}
 
@@ -259,8 +297,8 @@ export const ProcurementView: React.FC = () => {
                               <button
                                  onClick={() => toggleVendorStatus(vendor.id, vendor.status)}
                                  className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${vendor.status === 'Active'
-                                       ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                                       : 'bg-green-50 text-green-600 hover:bg-green-100'
+                                    ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                    : 'bg-green-50 text-green-600 hover:bg-green-100'
                                     }`}
                               >
                                  {vendor.status === 'Active' ? 'Set On Hold (H)' : 'Activate (H)'}
@@ -300,7 +338,7 @@ export const ProcurementView: React.FC = () => {
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                     {purchaseOrders.map(po => {
+                     {[...purchaseOrders].reverse().map(po => { // Reverse to show new POs first
                         const vendor = vendors.find(v => v.id === po.vendorId);
                         const matchStatus = getMatchStatus(po.id);
                         const lineItem = po.items[0]; // Assuming single item for mock
@@ -329,7 +367,7 @@ export const ProcurementView: React.FC = () => {
                                        {resolvingId === po.id ? <RefreshCw size={12} className="animate-spin" /> : null}
                                        Resolve (I)
                                     </button>
-                                 ) : po.status === PurchaseOrderStatus.SENT ? (
+                                 ) : po.status === PurchaseOrderStatus.SENT || po.status === PurchaseOrderStatus.PARTIAL ? (
                                     <button
                                        onClick={() => alert(`Simulate Receiving for ${po.id}`)}
                                        className="text-xs font-bold bg-green-50 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors flex items-center gap-2 ml-auto"

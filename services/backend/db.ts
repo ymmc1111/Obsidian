@@ -1,8 +1,8 @@
-
 import { DatabaseSchema } from './schema';
 import {
   INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_LOGS,
-  INITIAL_FINANCIAL_KPIS, INITIAL_INVOICES, INITIAL_OEE_DATA
+  INITIAL_FINANCIAL_KPIS, INITIAL_INVOICES, INITIAL_OEE_DATA,
+  INITIAL_VENDORS, INITIAL_POS // <-- Imported INITIAL_VENDORS and INITIAL_POS
 } from '../mockData';
 
 // Initialize the "PostgreSQL" Mock Database
@@ -63,7 +63,11 @@ const initializeDB = (): DatabaseSchema => {
     // Schedules and Calibrations are now handled by firebaseProductionService.ts or directly via mockData
     // We leave these arrays empty here to avoid confusion and redundancy in the mock database structure.
     tbl_schedules: [],
-    tbl_calibrations: []
+    tbl_calibrations: [],
+
+    // Phase 3 Procurement (Initialized with mock data)
+    tbl_vendors: INITIAL_VENDORS,
+    tbl_purchase_orders: INITIAL_POS
   };
 };
 

@@ -1,7 +1,6 @@
-
 import {
   ItemStatus, SensitivityLevel, FinancialKPI, Invoice,
-  OEEData, ProductionSchedule, CalibrationRecord
+  OEEData, ProductionSchedule, CalibrationRecord, Vendor, PurchaseOrder
 } from '../../types';
 
 // Core Data Schema (PostgreSQL Mock)
@@ -78,4 +77,8 @@ export interface DatabaseSchema {
   tbl_oee: OEEData[];
   tbl_schedules: ProductionSchedule[];
   tbl_calibrations: CalibrationRecord[];
+
+  // Phase 3 Procurement (Added)
+  tbl_vendors: Vendor[];
+  tbl_purchase_orders: PurchaseOrder[];
 }

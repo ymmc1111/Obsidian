@@ -1,9 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { INITIAL_ORDERS } from '../services/mockData';
 import { TacticalCard, StatusBadge } from './Shared';
-import { Globe, Truck, RotateCcw, Box } from 'lucide-react';
+import { Globe, Truck, RotateCcw, Box, RefreshCcw } from 'lucide-react';
+import { SalesOrder } from '../types';
 
 export const OrdersView: React.FC = () => {
+  const [orders, setOrders] = useState<SalesOrder[]>(INITIAL_ORDERS);
+
+  // Action: Reroute Order
+  const rerouteOrder = (id: string) => {
+    setOrders(prev => prev.map(order => {
+      if (order.id === id) {
+        const newLocation = order.fulfillmentLocation === 'US-East WH (Secure)' 
+          ? 'Nevada Depot' 
+          : 'US-East WH (Secure)';
+        return { ...order, fulfillmentLocation: newLocation };
+      }
+      return order;
+    }));
+  };
+
   return (
     <div className="h-full flex flex-col bg-white p-8 gap-6 overflow-y-auto">
       
@@ -66,21 +82,24 @@ export const OrdersView: React.FC = () => {
             <table className="w-full text-left border-collapse">
                <thead>
                   <tr>
-                     <th className="pb-4 pl-2 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Order ID</th>
-                     <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Customer</th>
-                     <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Fulfillment Node</th>
-                     <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Backorder</th>
-                     <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Total</th>
-                     <th className="pb-4 pr-2 text-right font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Status</th>
+                     <th className="pb-4 pl-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Order ID</th>
+                     <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Customer</th>
+                     <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Fulfillment Node</th>
+                     <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Backorder</th>
+                     <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Total</th>
+                     <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                     <th className="pb-4 pr-2 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Route Control</th>
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-50">
-                  {INITIAL_ORDERS.map(so => (
+                  {orders.map(so => (
                      <tr key={so.id} className="group hover:bg-gray-50 transition-colors">
                         <td className="py-4 pl-2 font-mono text-sm font-medium text-gray-900">{so.id}</td>
                         <td className="py-4 text-sm font-bold text-gray-900">{so.customer}</td>
                         <td className="py-4">
-                           <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
+                           <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-500 ${
+                              so.fulfillmentLocation.includes('Secure') ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-700'
+                           }`}>
                               <ShieldCheck size={12} /> {so.fulfillmentLocation}
                            </span>
                         </td>
@@ -92,8 +111,16 @@ export const OrdersView: React.FC = () => {
                            )}
                         </td>
                         <td className="py-4 text-sm font-mono font-medium text-gray-900">${so.totalAmount.toLocaleString()}</td>
-                        <td className="py-4 pr-2 text-right">
+                        <td className="py-4">
                            <StatusBadge status={so.status} />
+                        </td>
+                        <td className="py-4 pr-2 text-right">
+                           <button 
+                              onClick={() => rerouteOrder(so.id)}
+                              className="text-xs font-bold text-gray-500 hover:text-black hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 ml-auto"
+                           >
+                              <RefreshCcw size={12} /> Reroute
+                           </button>
                         </td>
                      </tr>
                   ))}

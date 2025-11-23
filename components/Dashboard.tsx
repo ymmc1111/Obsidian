@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { TacticalCard, StatWidget } from './Shared';
-import { AlertCircle, CheckCircle2, Package } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Package, Zap, Sparkles, Bot, Plus } from 'lucide-react';
 
 const DATA = [
   { name: 'M', value: 4000, compliance: 98 },
@@ -14,6 +14,22 @@ const DATA = [
 ];
 
 export const Dashboard: React.FC = () => {
+  const [simulationInput, setSimulationInput] = useState('');
+  const [simulationResult, setSimulationResult] = useState<string | null>(null);
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  const runSimulation = () => {
+    if (!simulationInput) return;
+    setIsSimulating(true);
+    setSimulationResult(null);
+    
+    // Mock AI delay
+    setTimeout(() => {
+        setIsSimulating(false);
+        setSimulationResult("If we switch vendor V-101 to on-hold status, the lead time impact on PO-2024-001 is estimated at +14 days. Confidence: High.");
+    }, 1500);
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-8 h-full overflow-y-auto">
       
@@ -121,6 +137,53 @@ export const Dashboard: React.FC = () => {
                 <p className="text-xs text-gray-400 text-center">System Version 2.4.0</p>
             </div>
         </div>
+      </TacticalCard>
+
+      {/* AI Sandbox */}
+      <TacticalCard title="Simulate Impact // AI Sandbox" className="md:col-span-2">
+         <div className="flex flex-col gap-4 mt-2">
+            <div className="relative">
+                <Bot className="absolute left-4 top-3 text-gray-400" size={20} />
+                <input 
+                    type="text" 
+                    value={simulationInput}
+                    onChange={(e) => setSimulationInput(e.target.value)}
+                    placeholder="Enter scenario (e.g., 'What if Vendor X is late?')"
+                    className="w-full bg-gray-50 rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none transition-all"
+                />
+                <button 
+                    onClick={runSimulation}
+                    disabled={!simulationInput || isSimulating}
+                    className="absolute right-2 top-1.5 px-4 py-1.5 bg-black text-white rounded-xl text-xs font-bold hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                    {isSimulating ? 'Simulating...' : 'Run'}
+                </button>
+            </div>
+            {simulationResult && (
+                <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Sparkles size={14} className="text-blue-600" />
+                        <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Prediction</span>
+                    </div>
+                    <p className="text-sm text-gray-800 font-medium leading-relaxed">{simulationResult}</p>
+                </div>
+            )}
+         </div>
+      </TacticalCard>
+
+      {/* Workflow Builder */}
+      <TacticalCard title="Adaptive Workflow Builder" className="md:col-span-2 bg-gray-50 border-dashed border-gray-200">
+         <div className="flex flex-col items-center justify-center h-full py-6 text-center">
+            <div className="w-12 h-12 bg-white rounded-2xl shadow-key flex items-center justify-center mb-3 text-gray-400">
+                <Zap size={24} />
+            </div>
+            <h4 className="text-gray-900 font-bold">No-Code Logic</h4>
+            <p className="text-sm text-gray-500 max-w-xs mx-auto mt-1 mb-4">Create event-driven triggers without engineering support.</p>
+            <button className="px-5 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl text-sm font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                <Plus size={16} />
+                <span>Create Custom Logic</span>
+            </button>
+         </div>
       </TacticalCard>
 
     </div>

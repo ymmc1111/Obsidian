@@ -1,16 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { INITIAL_INVOICES, INITIAL_VENDORS } from '../services/mockData';
 import { TacticalCard, StatWidget, StatusBadge } from './Shared';
-import { DollarSign, Clock, Lock, TrendingUp } from 'lucide-react';
+import { DollarSign, Clock, Lock, TrendingUp, Check, AlertTriangle } from 'lucide-react';
+import { Invoice, InvoiceStatus } from '../types';
 
 export const FinanceView: React.FC = () => {
+  const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
+
+  // Actions
+  const approveInvoice = (id: string) => {
+    setInvoices(prev => prev.map(inv => 
+      inv.id === id ? { ...inv, status: InvoiceStatus.APPROVED } : inv
+    ));
+  };
+
+  const flagInvoice = (id: string) => {
+    setInvoices(prev => prev.map(inv => 
+      inv.id === id ? { ...inv, status: InvoiceStatus.OVERDUE } : inv
+    ));
+  };
   
-  // Calculate KPIs
-  const totalAP = INITIAL_INVOICES
+  // Calculate KPIs (Real-time based on state)
+  const totalAP = invoices
     .filter(inv => ['PENDING', 'APPROVED', 'OVERDUE'].includes(inv.status))
     .reduce((acc, curr) => acc + curr.amountDue, 0);
     
-  const overdueCount = INITIAL_INVOICES.filter(inv => inv.status === 'OVERDUE').length;
+  const overdueCount = invoices.filter(inv => inv.status === InvoiceStatus.OVERDUE).length;
 
   return (
     <div className="h-full flex flex-col bg-white p-8 gap-6 overflow-y-auto">
@@ -65,16 +80,17 @@ export const FinanceView: React.FC = () => {
             <table className="w-full text-left border-collapse">
                <thead>
                   <tr>
-                     <th className="pb-4 pl-2 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Invoice ID</th>
-                     <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Vendor</th>
-                     <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">GL Account</th>
-                     <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Date</th>
-                     <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Amount</th>
-                     <th className="pb-4 pr-2 text-right font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Status</th>
+                     <th className="pb-4 pl-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Invoice ID</th>
+                     <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Vendor</th>
+                     <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">GL Account</th>
+                     <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Date</th>
+                     <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Amount</th>
+                     <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                     <th className="pb-4 pr-2 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Quick Actions</th>
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-50">
-                  {INITIAL_INVOICES.map(inv => {
+                  {invoices.map(inv => {
                      const vendor = INITIAL_VENDORS.find(v => v.id === inv.vendorId);
                      return (
                         <tr key={inv.id} className="group hover:bg-gray-50 transition-colors">
@@ -83,8 +99,36 @@ export const FinanceView: React.FC = () => {
                            <td className="py-4 text-sm font-mono text-gray-500">{inv.glAccount}</td>
                            <td className="py-4 text-sm text-gray-500">{inv.date.split('T')[0]}</td>
                            <td className="py-4 text-sm font-mono font-medium text-gray-900">${inv.amountDue.toLocaleString()}</td>
-                           <td className="py-4 pr-2 text-right">
+                           <td className="py-4">
                               <StatusBadge status={inv.status} />
+                           </td>
+                           <td className="py-4 pr-2 text-right">
+                              <div className="flex justify-end gap-2">
+                                {inv.status === InvoiceStatus.PENDING && (
+                                    <>
+                                        <button 
+                                            onClick={() => approveInvoice(inv.id)}
+                                            className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                                            title="Approve"
+                                        >
+                                            <Check size={16} strokeWidth={3} />
+                                        </button>
+                                        <button 
+                                            onClick={() => flagInvoice(inv.id)}
+                                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                            title="Flag Overdue"
+                                        >
+                                            <AlertTriangle size={16} strokeWidth={2.5} />
+                                        </button>
+                                    </>
+                                )}
+                                {inv.status === InvoiceStatus.APPROVED && (
+                                    <span className="text-xs font-bold text-green-600 flex items-center h-8">Ready for Payment</span>
+                                )}
+                                {inv.status === InvoiceStatus.OVERDUE && (
+                                    <span className="text-xs font-bold text-red-600 flex items-center h-8">Flagged</span>
+                                )}
+                              </div>
                            </td>
                         </tr>
                      );

@@ -29,6 +29,7 @@ import { LogisticsView } from './components/LogisticsView.tsx';
 import { TraceView } from './components/TraceView.tsx';
 import { ShopFloorView } from './components/ShopFloorView.tsx';
 import { Login } from './components/Login.tsx';
+import { UserProfileModal } from './components/UserProfileModal.tsx';
 import { BackendAPI } from './services/backend/api.ts';
 import { auditService } from './services/auditService.ts';
 import { telemetryService } from './services/telemetryService.ts';
@@ -65,6 +66,9 @@ const App: React.FC = () => {
 
   // New State: Store the actual logged-in user object
   const [currentUser, setCurrentUser] = useState<SystemUser | null>(null);
+
+  // Profile Modal State
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   // Function to refresh inventory data
   const refreshInventory = useCallback(async () => {
@@ -201,9 +205,13 @@ const App: React.FC = () => {
           </button>
           <span className="font-display font-bold text-lg">PocketOps</span>
         </div>
-        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold">
+        <button
+          onClick={() => setShowProfileModal(true)}
+          className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-md hover:scale-105 transition-transform cursor-pointer"
+          title="View Profile"
+        >
           {currentUser ? currentUser.name.split(' ').map(n => n[0]).join('') : 'UN'}
-        </div>
+        </button>
       </div>
 
       {/* Mobile Overlay */}
@@ -428,6 +436,14 @@ const App: React.FC = () => {
 
         </div>
       </main>
+
+      {/* User Profile Modal */}
+      {showProfileModal && currentUser && (
+        <UserProfileModal
+          user={currentUser}
+          onClose={() => setShowProfileModal(false)}
+        />
+      )}
     </div>
   );
 };

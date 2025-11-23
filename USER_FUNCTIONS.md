@@ -171,9 +171,9 @@ This document outlines all the core functions users should be able to perform in
 | Login | ✅ | All | Enter email and password to authenticate | Gain access to system |
 | Logout | ✅ | All | Click logout to end session | Secure account |
 | View Profile | ✅ | All | See own name, email, role, last active | Verify identity |
-| Change Password | 📋 | All | Update own password | Maintain account security |
-| Enable MFA | 📋 | All | Set up multi‑factor authentication | Enhance security |
-| View Session History | 📋 | All | See login history and devices | Detect unauthorized access |
+| Change Password | ✅ | All | Update own password | Maintain account security |
+| Enable MFA | ✅ | All | Set up multi‑factor authentication | Enhance security |
+| View Session History | ✅ | All | See login history and devices | Detect unauthorized access |
 | Role Cycling (Demo) | ✅ | All | Click profile to cycle through roles | Test permission levels |
 
 ### 9. Dashboard & Analytics

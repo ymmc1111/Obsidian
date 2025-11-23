@@ -1,7 +1,3 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # PocketOps: Adaptive Resource Platform (Defense & Regulated Industries)
 
 **PocketOps** is a next-generation Enterprise Resource Planning (ERP) and Manufacturing Execution System (MES) designed specifically for high-compliance environments (Defense, Aerospace, Pharma). It features a "Backend-First" architecture that decouples the frontend from data logic, ensuring data integrity, auditability, and scalability.

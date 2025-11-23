@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   Map,
-  Target
+  Target,
+  Tractor
 } from 'lucide-react';
 import { NavButton } from './components/Shared';
 import { Dashboard } from './components/Dashboard';
@@ -26,13 +27,15 @@ import { AdminView } from './components/AdminView';
 import { PlanningView } from './components/PlanningView';
 import { LogisticsView } from './components/LogisticsView';
 import { TraceView } from './components/TraceView';
+import { ShopFloorView } from './components/ShopFloorView';
 import { Login } from './components/Login';
 import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_LOGS } from './services/mockData';
-import { ComplianceMode } from './types';
+import { ComplianceMode, UserRole } from './types';
 
 enum View {
   DASHBOARD,
   INVENTORY,
+  SHOP_FLOOR,
   TRACEABILITY,
   MANUFACTURING,
   PROCUREMENT,
@@ -49,11 +52,28 @@ const App: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeComplianceMode, setActiveComplianceMode] = useState<ComplianceMode>(ComplianceMode.DEFENCE);
+  
+  // Demo State: Mock User Role for Shop Floor Security
+  const [currentUserRole, setCurrentUserRole] = useState<UserRole>(UserRole.PRODUCTION_OPERATOR);
 
   // Close mobile menu when view changes
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [currentView]);
+
+  // Demo: Cycle roles on profile click
+  const cycleRole = () => {
+    const roles = [
+        UserRole.PRODUCTION_OPERATOR,
+        UserRole.QUALITY_INSPECTOR,
+        UserRole.LOGISTICS_SPECIALIST,
+        UserRole.ADMIN
+    ];
+    const currentIndex = roles.indexOf(currentUserRole);
+    const nextRole = roles[(currentIndex + 1) % roles.length];
+    setCurrentUserRole(nextRole);
+    alert(`Demo: Switched role to ${nextRole}`);
+  };
 
   if (!isAuthenticated) {
     return <Login onLogin={() => setIsAuthenticated(true)} />;
@@ -74,7 +94,7 @@ const App: React.FC = () => {
             <span className="font-display font-bold text-lg">PocketOps</span>
          </div>
          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold">
-            JD
+            {currentUserRole === UserRole.ADMIN ? 'AD' : 'OP'}
          </div>
       </div>
 
@@ -122,6 +142,13 @@ const App: React.FC = () => {
 
         {/* Navigation "Keys" */}
         <nav className="flex-1 space-y-2 overflow-y-auto no-scrollbar pb-6 lg:pb-0">
+          <NavButton 
+            icon={Tractor} 
+            label="Shop Floor Mode" 
+            active={currentView === View.SHOP_FLOOR} 
+            onClick={() => setCurrentView(View.SHOP_FLOOR)} 
+            collapsed={sidebarCollapsed && !mobileMenuOpen}
+          />
           <NavButton 
             icon={LayoutGrid} 
             label="Overview" 
@@ -199,15 +226,19 @@ const App: React.FC = () => {
         {/* User Profile "Key" */}
         <div className="mt-auto pt-4 lg:block hidden">
            {!sidebarCollapsed ? (
-            <div className="bg-white rounded-2xl p-4 shadow-key border border-white/50 flex items-center gap-3">
+            <div 
+                className="bg-white rounded-2xl p-4 shadow-key border border-white/50 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={cycleRole}
+                title="Click to cycle User Role (Demo)"
+            >
               <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-800">
-                JD
+                {currentUserRole === UserRole.ADMIN ? 'AD' : 'OP'}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-gray-900 truncate">J. Doe</p>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Clearance Lvl 4</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide truncate">{currentUserRole}</p>
               </div>
-              <button onClick={() => setIsAuthenticated(false)} className="text-gray-400 hover:text-red-500 transition-colors">
+              <button onClick={(e) => { e.stopPropagation(); setIsAuthenticated(false); }} className="text-gray-400 hover:text-red-500 transition-colors">
                 <LogOut size={18} />
               </button>
             </div>
@@ -237,6 +268,7 @@ const App: React.FC = () => {
               <h2 className="text-lg md:text-2xl font-display font-bold tracking-tight text-gray-900 truncate max-w-[200px] md:max-w-none">
                 {currentView === View.DASHBOARD && 'Mission Control'}
                 {currentView === View.INVENTORY && 'Materials & Assets'}
+                {currentView === View.SHOP_FLOOR && 'Shop Floor Terminal'}
                 {currentView === View.TRACEABILITY && 'Visual Genealogy'}
                 {currentView === View.MANUFACTURING && 'Assembly Line'}
                 {currentView === View.PROCUREMENT && 'P2P Control Grid'}
@@ -259,6 +291,7 @@ const App: React.FC = () => {
           <div className="flex-1 overflow-auto bg-white relative">
              {currentView === View.DASHBOARD && <Dashboard complianceMode={activeComplianceMode} />}
              {currentView === View.INVENTORY && <InventoryView items={INITIAL_INVENTORY} />}
+             {currentView === View.SHOP_FLOOR && <ShopFloorView userRole={currentUserRole} traveler={MOCK_TRAVELER} />}
              {currentView === View.TRACEABILITY && <TraceView />}
              {currentView === View.MANUFACTURING && <TravelerView traveler={MOCK_TRAVELER} complianceMode={activeComplianceMode} />}
              {currentView === View.PROCUREMENT && <ProcurementView />}

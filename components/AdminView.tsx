@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { INITIAL_USERS } from '../services/mockData';
 import { StatusBadge, TacticalCard, Toast } from './Shared';
-import { Users, Shield, Plus, Lock, CheckCircle2, X, Globe, Microscope, Building2, FileCheck, Ban, Unlock, Activity, Server, Database, Download, Upload, RefreshCw } from 'lucide-react';
+import { Users, Shield, Plus, Lock, CheckCircle2, X, Globe, Microscope, Building2, FileCheck, Ban, Unlock, Activity, Server, Database, Download, Upload, RefreshCw, CheckSquare, Key } from 'lucide-react';
 import { SystemUser, UserRole, ComplianceMode } from '../types';
 import { INITIAL_VALIDATIONS } from '../services/mockData';
 import { auditService } from '../services/auditService';
@@ -15,6 +15,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeMode, setMode }) => 
   const [users, setUsers] = useState<SystemUser[]>(INITIAL_USERS);
   const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+  // CAPA State
+  const [showCAPAModal, setShowCAPAModal] = useState(false);
+  const [capas, setCapas] = useState([
+    { id: 'CAPA-102', description: 'Deviation in Traveler T-2024-A', status: 'OPEN', createdDate: '2024-11-15' },
+    { id: 'CAPA-SF-245', description: 'Material variance detected', status: 'OPEN', createdDate: '2024-11-18' },
+    { id: 'CAPA-101', description: 'Equipment calibration overdue', status: 'CLOSED', createdDate: '2024-11-10' }
+  ]);
+
+  // Physical Access State
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [accessZones] = useState([
+    { zone: 'Clean Room A', level: 'Level 4 - Restricted', roles: ['Quality Inspector', 'Admin'] },
+    { zone: 'Warehouse Secure', level: 'Level 3 - Controlled', roles: ['Logistics Specialist', 'Admin'] },
+    { zone: 'Server Room', level: 'Level 5 - Maximum Security', roles: ['Admin'] },
+    { zone: 'Production Floor', level: 'Level 2 - General Access', roles: ['Production Operator', 'Quality Inspector', 'Admin'] }
+  ]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -70,6 +87,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeMode, setMode }) => 
       setTimeout(() => {
         showToast("System Restored to Checkpoint 2024-11-22.", 'success');
       }, 2500);
+    }
+  };
+
+  // Close CAPA
+  const handleCloseCAPAClick = (capaId: string) => {
+    if (window.confirm(`Are you sure you want to close CAPA ${capaId}? This action requires QA approval.`)) {
+      setCapas(prev => prev.map(c =>
+        c.id === capaId ? { ...c, status: 'CLOSED' } : c
+      ));
+
+      auditService.logAction(
+        'J. Doe (U-001)',
+        'CAPA_CLOSED',
+        `CAPA ${capaId} was closed and verified by Admin.`
+      );
+
+      showToast(`CAPA ${capaId} closed successfully`, 'success');
     }
   };
 
@@ -373,6 +407,190 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeMode, setMode }) => 
           </div>
         </div>
       )}
+
+      {/* CAPA Management Section */}
+      <section>
+        <TacticalCard title="CAPA Management">
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm text-gray-500">Corrective and Preventive Actions</p>
+            <button
+              onClick={() => setShowCAPAModal(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors text-sm font-bold"
+            >
+              <CheckSquare size={16} />
+              Manage CAPAs
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div className="p-4 bg-red-50 rounded-2xl border border-red-100 text-center">
+              <p className="text-xs font-bold text-gray-500 uppercase">Open CAPAs</p>
+              <p className="text-3xl font-display font-bold text-red-600 mt-2">
+                {capas.filter(c => c.status === 'OPEN').length}
+              </p>
+            </div>
+            <div className="p-4 bg-green-50 rounded-2xl border border-green-100 text-center">
+              <p className="text-xs font-bold text-gray-500 uppercase">Closed CAPAs</p>
+              <p className="text-3xl font-display font-bold text-green-600 mt-2">
+                {capas.filter(c => c.status === 'CLOSED').length}
+              </p>
+            </div>
+            <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 text-center">
+              <p className="text-xs font-bold text-gray-500 uppercase">Total CAPAs</p>
+              <p className="text-3xl font-display font-bold text-blue-600 mt-2">
+                {capas.length}
+              </p>
+            </div>
+          </div>
+        </TacticalCard>
+      </section>
+
+      {/* Physical Access Management Section */}
+      <section>
+        <TacticalCard title="Physical Access Control">
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm text-gray-500">Role-based access to physical zones</p>
+            <button
+              onClick={() => setShowAccessModal(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors text-sm font-bold"
+            >
+              <Key size={16} />
+              Manage Access
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {accessZones.slice(0, 2).map((zone, idx) => (
+              <div key={idx} className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-bold text-gray-900">{zone.zone}</p>
+                    <p className="text-xs text-gray-500 mt-1">{zone.level}</p>
+                  </div>
+                  <Shield size={20} className="text-gray-400" />
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {zone.roles.map((role, ridx) => (
+                    <span key={ridx} className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                      {role}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </TacticalCard>
+      </section>
+
+      {/* CAPA Modal */}
+      {showCAPAModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/60 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] shadow-2xl p-6 md:p-8 border border-gray-100 max-w-3xl w-full animate-in fade-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-2xl font-display font-bold text-gray-900">CAPA Management</h3>
+                <p className="text-sm text-gray-500 mt-1">Close and verify corrective actions</p>
+              </div>
+              <button onClick={() => setShowCAPAModal(false)} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors">
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {capas.map((capa) => (
+                <div key={capa.id} className={`p-4 rounded-xl border ${capa.status === 'OPEN' ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'
+                  }`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-mono font-bold text-gray-900">{capa.id}</p>
+                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${capa.status === 'OPEN' ? 'bg-red-200 text-red-700' : 'bg-green-200 text-green-700'
+                          }`}>
+                          {capa.status}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-2">{capa.description}</p>
+                      <p className="text-xs text-gray-500">Created: {capa.createdDate}</p>
+                    </div>
+                    {capa.status === 'OPEN' && (
+                      <button
+                        onClick={() => handleCloseCAPAClick(capa.id)}
+                        className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-bold ml-4"
+                      >
+                        <CheckSquare size={16} />
+                        Close CAPA
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowCAPAModal(false)}
+              className="w-full mt-6 py-3.5 bg-black text-white rounded-2xl font-bold shadow-key hover:bg-gray-800 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Physical Access Modal */}
+      {showAccessModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/60 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] shadow-2xl p-6 md:p-8 border border-gray-100 max-w-3xl w-full animate-in fade-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-2xl font-display font-bold text-gray-900">Physical Access Control</h3>
+                <p className="text-sm text-gray-500 mt-1">Manage role-based access to physical zones</p>
+              </div>
+              <button onClick={() => setShowAccessModal(false)} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors">
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {accessZones.map((zone, idx) => (
+                <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Shield size={18} className="text-blue-600" />
+                        <p className="font-bold text-gray-900">{zone.zone}</p>
+                      </div>
+                      <p className="text-sm text-gray-600">{zone.level}</p>
+                    </div>
+                    <Key size={20} className="text-gray-400" />
+                  </div>
+                  <div className="pt-3 border-t border-gray-200">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Authorized Roles</p>
+                    <div className="flex flex-wrap gap-2">
+                      {zone.roles.map((role, ridx) => (
+                        <span key={ridx} className="text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">
+                          {role}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 p-4 bg-yellow-50 border border-yellow-100 rounded-xl">
+              <p className="text-sm text-yellow-800">
+                <strong>Note:</strong> Physical access changes require Security Officer approval and are logged for compliance audits.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowAccessModal(false)}
+              className="w-full mt-6 py-3.5 bg-black text-white rounded-2xl font-bold shadow-key hover:bg-gray-800 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>

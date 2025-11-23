@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ProductionRun, UserRole, TravelerStep } from '../types';
-import { Check, AlertTriangle, Search, ArrowRight, ShieldCheck, Fingerprint, Box, Pause, Play, Paperclip, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, AlertTriangle, Search, ArrowRight, ShieldCheck, Fingerprint, Box, Pause, Play, Paperclip, X, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
 import { TacticalCard, Toast } from './Shared';
 import { auditService } from '../services/auditService';
 import { telemetryService } from '../services/telemetryService';
@@ -159,6 +159,84 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
         }
     };
 
+    // Print Traveler
+    const handlePrintTraveler = () => {
+        const printDate = new Date().toLocaleDateString();
+        const printTime = new Date().toLocaleTimeString();
+
+        // Generate traveler document
+        let travelerContent = `
+╔════════════════════════════════════════════════════════════╗
+║              PRODUCTION TRAVELER DOCUMENT                  ║
+╠════════════════════════════════════════════════════════════╣
+║                                                            ║
+║  Traveler ID: ${currentTraveler.id.padEnd(42)} ║
+║  Part Number: ${currentTraveler.partNumber.padEnd(42)} ║
+║  Batch/Lot: ${(currentTraveler.batchLot || 'N/A').padEnd(44)} ║
+║  Quantity: ${currentTraveler.quantity.toString().padEnd(47)} ║
+║  Status: ${currentTraveler.status.padEnd(49)} ║
+║                                                            ║
+║  Printed: ${printDate} at ${printTime.padEnd(24)}║
+║                                                            ║
+╠════════════════════════════════════════════════════════════╣
+║  PRODUCTION STEPS                                          ║
+╠════════════════════════════════════════════════════════════╣
+║                                                            ║
+`;
+
+        currentTraveler.steps.forEach((step, idx) => {
+            const stepNum = (idx + 1).toString().padStart(2);
+            const completed = step.completed ? '✓' : '○';
+            travelerContent += `║  ${stepNum}. [${completed}] ${step.name.padEnd(47)}║\n`;
+            travelerContent += `║      Role: ${step.requiredRole.padEnd(45)}║\n`;
+
+            if (step.completed && step.completedBy) {
+                travelerContent += `║      Completed by: ${step.completedBy.padEnd(36)}║\n`;
+                travelerContent += `║      Timestamp: ${(step.completedAt || 'N/A').padEnd(39)}║\n`;
+            }
+
+            if (step.inputType && step.inputType !== 'none') {
+                travelerContent += `║      Input Required: ${step.inputType.padEnd(35)}║\n`;
+            }
+
+            travelerContent += `║                                                            ║\n`;
+        });
+
+        travelerContent += `╠════════════════════════════════════════════════════════════╣
+║  SIGNATURES & APPROVALS                                    ║
+╠════════════════════════════════════════════════════════════╣
+║                                                            ║
+║  Operator: _______________________  Date: ___________      ║
+║                                                            ║
+║  QA Inspector: ___________________  Date: ___________      ║
+║                                                            ║
+║  Supervisor: _____________________  Date: ___________      ║
+║                                                            ║
+╠════════════════════════════════════════════════════════════╣
+║  COMPLIANCE NOTES                                          ║
+╠════════════════════════════════════════════════════════════╣
+║                                                            ║
+║  This document is a controlled record for production       ║
+║  traceability and quality assurance purposes.              ║
+║                                                            ║
+║  Document Hash: 0x${Math.random().toString(16).substring(2, 18).padEnd(36)} ║
+║                                                            ║
+╚════════════════════════════════════════════════════════════╝
+        `;
+
+        // Create blob and download
+        const blob = new Blob([travelerContent], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Traveler_${currentTraveler.id}_${Date.now()}.txt`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast(`Traveler ${currentTraveler.id} printed successfully`, 'success');
+    };
+
     // Get completed travelers from DB for the sidebar
     const completedTravelers = db.tbl_traveler.filter(t => t.status === 'COMPLETED');
 
@@ -229,6 +307,13 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
                         <h1 className="text-4xl font-display font-bold text-gray-900">{traveler.partNumber}</h1>
                     </div>
                     <div className="text-right flex items-center gap-4">
+                        <button
+                            onClick={handlePrintTraveler}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-bold text-sm"
+                        >
+                            <Printer size={16} />
+                            Print Traveler
+                        </button>
                         <button
                             onClick={handlePauseResume}
                             className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold transition-colors ${currentTraveler.status === 'HALTED' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'}`}

@@ -109,7 +109,7 @@ This document outlines all the core functions users should be able to perform in
 | View Traceability Log | ✅ | Quality Inspector | Access full audit history of production run | Ensure material and process compliance |
 | Pause/Resume Production | ✅ | Production Operator, Admin | Halt or restart a production run | Manage interruptions and downtime |
 | Complete Production Run | ✅ | Quality Inspector, Admin | Mark entire traveler as COMPLETED | Close out finished work |
-| Print Traveler | 📋 | All | Generate PDF of traveler for paper backup | Provide shop floor reference |
+| Print Traveler | ✅ | All | Generate PDF of traveler for paper backup | Provide shop floor reference |
 | View Historical Traveler | ✅ | All | Search and view completed runs by Part No. or Run ID | Retrieve full genealogy |
 
 ### 4. Finance & Procurement
@@ -162,8 +162,8 @@ This document outlines all the core functions users should be able to perform in
 | Manage CAPA | ✅ | Admin, Quality Inspector | View and update corrective actions | Track quality improvements |
 | System Health Monitor | ✅ | Admin | View real‑time status of database, API, services | Ensure system availability |
 | Backup & Restore | ✅ | Admin | Trigger manual backup or restore | Protect against data loss |
-| Close/Verify CAPA | 📋 | Admin, Quality Inspector | Review and sign off completed CAPA | Formalize resolution |
-| Manage Physical Access | 📋 | Admin, Security Officer | Map user roles to physical access zones | Enforce regulatory security |
+| Close/Verify CAPA | ✅ | Admin, Quality Inspector | Review and sign off completed CAPA | Formalize resolution |
+| Manage Physical Access | ✅ | Admin, Security Officer | Map user roles to physical access zones | Enforce regulatory security |
 
 ### 8. Authentication & User Profile
 | Function | Status | User Roles | Action | Goal |

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { INITIAL_VENDORS } from '../services/mockData';
 import { BackendAPI } from '../services/backend/api';
 import { TacticalCard, StatWidget, StatusBadge, Toast } from './Shared';
-import { DollarSign, Clock, Lock, TrendingUp, Check, AlertTriangle, ArrowUpRight, ArrowDownRight, PieChart, Scale } from 'lucide-react';
+import { DollarSign, Clock, Lock, TrendingUp, Check, AlertTriangle, ArrowUpRight, ArrowDownRight, PieChart, Scale, Download } from 'lucide-react';
 import { Invoice, InvoiceStatus, ComplianceMode, FinancialKPI, SystemUser, UserRole } from '../types';
 import { telemetryService } from '../services/telemetryService';
 
@@ -92,6 +92,100 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode, curren
         }
     };
 
+    // Export Financial Report
+    const handleExportFinancialReport = () => {
+        const reportDate = new Date().toLocaleDateString();
+        const reportTime = new Date().toLocaleTimeString();
+
+        // Calculate P&L metrics
+        const totalRevenue = financialKPIs.find(k => k.label === 'Revenue')?.value || 0;
+        const totalCOGS = financialKPIs.find(k => k.label === 'COGS')?.value || 0;
+        const grossProfit = totalRevenue - totalCOGS;
+        const grossMargin = totalRevenue > 0 ? ((grossProfit / totalRevenue) * 100).toFixed(2) : '0.00';
+
+        // Calculate AP metrics
+        const pendingInvoices = invoices.filter(inv => inv.status === InvoiceStatus.PENDING);
+        const approvedInvoices = invoices.filter(inv => inv.status === InvoiceStatus.APPROVED);
+        const overdueInvoices = invoices.filter(inv => inv.status === InvoiceStatus.OVERDUE);
+
+        // Generate report content
+        let reportContent = `
+╔════════════════════════════════════════════════════════════╗
+║          FINANCIAL REPORT - P&L STATEMENT                  ║
+╠════════════════════════════════════════════════════════════╣
+║                                                            ║
+║  Generated: ${reportDate} at ${reportTime.padEnd(20)}║
+║  Compliance Mode: ${complianceMode.padEnd(35)}║
+║  Report Type: Profit & Loss + Accounts Payable            ║
+║                                                            ║
+╠════════════════════════════════════════════════════════════╣
+║  PROFIT & LOSS SUMMARY                                     ║
+╠════════════════════════════════════════════════════════════╣
+║                                                            ║
+║  Revenue:                    $${totalRevenue.toLocaleString().padStart(20)} ║
+║  Cost of Goods Sold (COGS):  $${totalCOGS.toLocaleString().padStart(20)} ║
+║  ─────────────────────────────────────────────────────     ║
+║  Gross Profit:               $${grossProfit.toLocaleString().padStart(20)} ║
+║  Gross Margin:                ${grossMargin}%${' '.repeat(20 - grossMargin.length)} ║
+║                                                            ║
+╠════════════════════════════════════════════════════════════╣
+║  ACCOUNTS PAYABLE SUMMARY                                  ║
+╠════════════════════════════════════════════════════════════╣
+║                                                            ║
+║  Total AP Outstanding:       $${totalAP.toLocaleString().padStart(20)} ║
+║  Pending Invoices:            ${pendingInvoices.length.toString().padStart(21)} ║
+║  Approved Invoices:           ${approvedInvoices.length.toString().padStart(21)} ║
+║  Overdue Invoices:            ${overdueInvoices.length.toString().padStart(21)} ║
+║                                                            ║
+╠════════════════════════════════════════════════════════════╣
+║  INVOICE DETAILS                                           ║
+╠════════════════════════════════════════════════════════════╣
+║                                                            ║
+`;
+
+        // Add invoice details
+        invoices.slice(0, 10).forEach((inv, idx) => {
+            reportContent += `║  ${(idx + 1).toString().padStart(2)}. ${inv.id.padEnd(15)} $${inv.amountDue.toLocaleString().padStart(10)} ${inv.status.padEnd(12)}║\n`;
+        });
+
+        if (invoices.length > 10) {
+            reportContent += `║  ... and ${(invoices.length - 10)} more invoices${' '.repeat(30)}║\n`;
+        }
+
+        reportContent += `║                                                            ║
+╠════════════════════════════════════════════════════════════╣
+║  KEY FINANCIAL RATIOS                                      ║
+╠════════════════════════════════════════════════════════════╣
+║                                                            ║
+`;
+
+        // Add KPIs
+        financialKPIs.forEach(kpi => {
+            const label = kpi.label.padEnd(30);
+            const value = typeof kpi.value === 'number' ? `$${kpi.value.toLocaleString()}` : kpi.value;
+            reportContent += `║  ${label} ${value.toString().padStart(22)} ║\n`;
+        });
+
+        reportContent += `║                                                            ║
+╚════════════════════════════════════════════════════════════╝
+
+This is an official financial document.
+Hash: 0x${Math.random().toString(16).substring(2, 18)}
+        `;
+
+        // Create blob and download
+        const blob = new Blob([reportContent], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Financial_Report_${Date.now()}.txt`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast("Financial report exported successfully", 'success');
+    };
+
     // Calculate KPIs (Real-time based on state)
     const totalAP = invoices
         .filter(inv => ['PENDING', 'APPROVED', 'OVERDUE'].includes(inv.status))
@@ -159,7 +253,16 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode, curren
 
             {/* Core Financial Reporting */}
             <div>
-                <h3 className="font-display text-lg font-semibold tracking-tight text-gray-900 mb-4">Core Financial Reporting</h3>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                    <h3 className="font-display text-lg font-semibold tracking-tight text-gray-900">Accounts Payable</h3>
+                    <button
+                        onClick={handleExportFinancialReport}
+                        className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors shadow-key font-bold text-sm"
+                    >
+                        <Download size={16} />
+                        Export Report
+                    </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     {/* Profit & Loss Summary */}
                     <TacticalCard title="Profit & Loss Summary (Q3 YTD)">

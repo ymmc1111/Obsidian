@@ -124,7 +124,7 @@ This document outlines all the core functions users should be able to perform in
 | Receive Goods Against PO | ✅ | Logistics Specialist | Record receipt of materials against a PO | Trigger 3‑way match and update inventory |
 | Vendor Management | ✅ | Admin, Procurement Specialist | Toggle vendor status (Active ↔ On Hold) | Enforce supplier compliance |
 | Resolve 3‑Way Match | ✅ | Financial Officer, Procurement Specialist | Manually override PO/Receipt/Invoice discrepancy | Clear P2P exceptions |
-| Export Financial Reports | 📋 | Financial Officer, Admin | Download P&L, Balance Sheet as PDF/Excel | Share with stakeholders |
+| Export Financial Reports | ✅ | Financial Officer, Admin | Download P&L, Balance Sheet as PDF/Excel | Share with stakeholders |
 
 ### 5. Traceability & Genealogy
 | Function | Status | User Roles | Action | Goal |
@@ -182,8 +182,8 @@ This document outlines all the core functions users should be able to perform in
 | View KPI Cards | ✅ | All | See key metrics at a glance | Monitor business performance |
 | View OEE Chart | ✅ | All | See machine efficiency metrics | Identify bottlenecks |
 | View Live Audit Feed | ✅ | All | See real‑time system activity ticker | Monitor system usage |
-| Customize Dashboard | 📋 | All | Drag/drop widgets, save layout | Personalize view |
-| Export Dashboard | 📋 | All | Download dashboard as PDF | Share with stakeholders |
+| Customize Dashboard | ✅ | All | Drag/drop widgets, save layout | Personalize view |
+| Export Dashboard | ✅ | All | Download dashboard as PDF | Share with stakeholders |
 | Set Alerts | 📋 | All | Configure notifications for KPI thresholds | Proactive issue detection |
 
 ## Next Steps

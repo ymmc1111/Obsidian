@@ -4,68 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PocketOps | Industrial Grade</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              display: ['Inter Tight', 'sans-serif'], // For that "printed on plastic" look
-              mono: ['JetBrains Mono', 'monospace'],
-            },
-            colors: {
-              ios: {
-                bg: '#F5F5F7', // Light gray background
-                surface: '#FFFFFF',
-                text: '#1D1D1F',
-                subtext: '#86868B',
-                border: '#D2D2D7',
-                blue: '#007AFF',
-                orange: '#FF3B30', // International Safety Orange
-                green: '#34C759',
-              }
-            },
-            borderRadius: {
-              '4xl': '2rem', // For the squircle key shape
-            },
-            boxShadow: {
-              'soft': '0 10px 30px -10px rgba(0,0,0,0.05)',
-              'key': '0 2px 5px rgba(0,0,0,0.05), 0 1px 1px rgba(0,0,0,0.02)', // Tactile key shadow
-              'key-pressed': 'inset 0 2px 4px rgba(0,0,0,0.05)',
-            }
-          }
-        }
-      }
-    </script>
-    <style>
-      body {
-        background-color: #F5F5F7;
-        color: #1D1D1F;
-      }
-      /* Hide scrollbar for cleaner aesthetic */
-      ::-webkit-scrollbar {
-        width: 0px;
-        background: transparent;
-      }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
-    "recharts": "https://aistudiocdn.com/recharts@^3.4.1"
-  }
-}
-</script>
-</head>
+  </head>
   <body class="bg-ios-bg text-ios-text antialiased overflow-hidden h-screen w-screen selection:bg-ios-text selection:text-white">
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>

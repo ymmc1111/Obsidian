@@ -1,7 +1,7 @@
 import { db } from './db';
-import { AuditLogEntry, InvoiceStatus, SystemUser, ProductionSchedule, InventoryItem, ItemStatus, SensitivityLevel } from '../../types';
-import { MOCK_TRAVELER, INITIAL_USERS, INITIAL_CALIBRATIONS } from '../mockData';
-import { initializeFirebase, subscribeToSchedules } from '../firebaseProductionService';
+import { AuditLogEntry, InvoiceStatus, SystemUser, ProductionSchedule, InventoryItem, ItemStatus, SensitivityLevel, CalibrationRecord } from '../../types.ts';
+import { MOCK_TRAVELER, INITIAL_USERS } from '../mockData.ts';
+import { initializeFirebase, subscribeToSchedules, addProductionSchedule, updateProductionSchedule, deleteProductionSchedule, getCalibrations } from '../firebaseProductionService.ts';
 
 // Initialize Firebase Auth/DB connection immediately
 initializeFirebase().then(userId => {
@@ -20,43 +20,22 @@ const logListeners: WebSocketListener[] = [];
 const verifyIntegrityHash = (entry: any): boolean => {
   // In a real backend, we would re-compute the hash from the fields
   // For this mock, we ensure the hash is present and matches a simple check
-  if (!entry.hash) return false;
   // Simulating a check:
   // const computed = sha256(`${entry.timestamp}|${entry.actor}|${entry.action}|${entry.details}`);
   // return computed === entry.hash;
-  return true;
+  return entry.hash && entry.hash.startsWith('0x'); // Minimal hash check
 };
 
-// Helper to reconstruct Traveler from DB
+// Helper to reconstruct Traveler from DB (Keep for API consistency)
 const reconstructTraveler = (runId: string): any => {
   const run = db.tbl_traveler.find(t => t.id === runId);
   if (!run) return null;
 
-  // In a real app, we would join these. For mock, we'll just return the MOCK_TRAVELER structure 
-  // but populated from DB where possible, or just return the MOCK_TRAVELER if we didn't fully normalize it.
-  // Given db.ts initializes from MOCK_TRAVELER, we can map back.
-
-  // For Phase 1, let's return a structure that matches ProductionRun
-  // We need to import MOCK_TRAVELER to get the steps if they aren't fully in DB?
-  // db.ts has tbl_traveler_steps_data which only has completed steps.
-  // To keep it simple and robust for this mock phase, we will import MOCK_TRAVELER here 
-  // or better, just return the data from db.ts and mock the rest.
-
-  // Actually, let's look at db.ts again. It imports MOCK_TRAVELER. 
-  // We can just use the one in db.ts if we want, but we should try to use the DB tables.
-  // But tbl_traveler_steps_data only has completed steps.
-  // So we might lose the uncompleted steps if we only look at DB.
-  // For this exercise, I will assume we can access the full MOCK_TRAVELER from db.ts context 
-  // or I will re-import it in api.ts to serve as the "template" and overlay DB data.
-  // But api.ts doesn't import MOCK_TRAVELER.
-
-  // Let's just return the MOCK_TRAVELER from mockData for now, but wrapped in a promise 
-  // to simulate the API, as the DB structure in db.ts is a bit lossy for the full UI.
-  // Wait, the prompt says: "Returns the mock traveler data mapped from db.tbl_traveler and MOCK_TRAVELER.steps"
-  // So I should probably import MOCK_TRAVELER in api.ts or just use the DB.
-
-  // Let's import MOCK_TRAVELER in api.ts to be safe and compliant with the prompt's hint.
-  return null;
+  return {
+    ...MOCK_TRAVELER,
+    status: run.status,
+    quantity: run.quantity,
+  };
 };
 
 export const BackendAPI = {
@@ -120,9 +99,6 @@ export const BackendAPI = {
       duration_ms: traceData.duration,
       tags: traceData.tags
     });
-
-    // 2. Store Metrics (if any provided in a batch - simplified here)
-    // console.log(`[Backend] Trace Ingested: ${traceData.name}`);
     return { status: 202, message: "Accepted" };
   },
 
@@ -351,10 +327,47 @@ export const BackendAPI = {
     });
   },
 
-  getCalibrations: async () => {
+  // Expose Firestore CRUD functions via BackendAPI (Phase 1 Completion)
+  addProductionSchedule: async (schedule: Omit<ProductionSchedule, 'id' | 'loadFactor'> & { loadFactor: number }): Promise<string> => {
+    // Add audit log entry for the operation (optional, but good practice for compliance)
+    BackendAPI.ingestAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: 'Planning User',
+      action: 'SCHEDULE_CREATED',
+      details: `Created new schedule for ${schedule.partNumber} on ${schedule.machineCenter}.`,
+      hash: '0xmockhash'
+    });
+    return addProductionSchedule(schedule);
+  },
+
+  updateProductionSchedule: async (id: string, updates: Partial<ProductionSchedule>): Promise<void> => {
+    // Add audit log entry for the operation
+    BackendAPI.ingestAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: 'Planning User',
+      action: 'SCHEDULE_UPDATED',
+      details: `Updated schedule ${id}. Status: ${updates.status || 'N/A'}.`,
+      hash: '0xmockhash'
+    });
+    return updateProductionSchedule(id, updates);
+  },
+
+  deleteProductionSchedule: async (id: string): Promise<void> => {
+    // Add audit log entry for the operation
+    BackendAPI.ingestAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: 'Planning User',
+      action: 'SCHEDULE_DELETED',
+      details: `Deleted schedule ${id}.`,
+      hash: '0xmockhash'
+    });
+    return deleteProductionSchedule(id);
+  },
+
+  getCalibrations: async (): Promise<CalibrationRecord[]> => {
     await new Promise(resolve => setTimeout(resolve, 400));
-    // Continue to use mock data for calibrations
-    return INITIAL_CALIBRATIONS;
+    // Use the mock data getter from firebaseProductionService.ts
+    return getCalibrations();
   },
 
   // --- Phase 2: Traceability ---
@@ -366,7 +379,7 @@ export const BackendAPI = {
     const affectedItems = db.tbl_inventory.filter(i => i.batchLot === batchLot);
 
     // Update their status to QUARANTINE
-    affectedItems.forEach(i => i.status = 'Quarantine' as any); // Casting for simplicity if enum mismatch
+    affectedItems.forEach(i => i.status = 'QUARANTINE' as ItemStatus);
 
     return {
       batchLot,

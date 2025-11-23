@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   LayoutGrid,
   Box,
@@ -17,24 +16,24 @@ import {
   Target,
   Tractor
 } from 'lucide-react';
-import { NavButton } from './components/Shared';
-import { Dashboard } from './components/Dashboard';
-import { InventoryView } from './components/InventoryView';
-import { TravelerView } from './components/TravelerView';
-import { ProcurementView } from './components/ProcurementView';
-import { FinanceView } from './components/FinanceView';
-import { OrdersView } from './components/OrdersView';
-import { AdminView } from './components/AdminView';
-import { PlanningView } from './components/PlanningView';
-import { LogisticsView } from './components/LogisticsView';
-import { TraceView } from './components/TraceView';
-import { ShopFloorView } from './components/ShopFloorView';
-import { Login } from './components/Login';
-import { BackendAPI } from './services/backend/api';
-import { auditService } from './services/auditService';
-import { telemetryService } from './services/telemetryService';
-import { monitoringService } from './services/monitoringService';
-import { ComplianceMode, UserRole, AuditLogEntry, InventoryItem, ProductionRun, SystemUser } from './types';
+import { NavButton } from './components/Shared.tsx';
+import { Dashboard } from './components/Dashboard.tsx';
+import { InventoryView } from './components/InventoryView.tsx';
+import { TravelerView } from './components/TravelerView.tsx';
+import { ProcurementView } from './components/ProcurementView.tsx';
+import { FinanceView } from './components/FinanceView.tsx';
+import { OrdersView } from './components/OrdersView.tsx';
+import { AdminView } from './components/AdminView.tsx';
+import { PlanningView } from './components/PlanningView.tsx';
+import { LogisticsView } from './components/LogisticsView.tsx';
+import { TraceView } from './components/TraceView.tsx';
+import { ShopFloorView } from './components/ShopFloorView.tsx';
+import { Login } from './components/Login.tsx';
+import { BackendAPI } from './services/backend/api.ts';
+import { auditService } from './services/auditService.ts';
+import { telemetryService } from './services/telemetryService.ts';
+import { monitoringService } from './services/monitoringService.ts';
+import { ComplianceMode, UserRole, AuditLogEntry, InventoryItem, ProductionRun, SystemUser } from './types.ts';
 
 enum View {
   DASHBOARD,
@@ -59,7 +58,7 @@ const App: React.FC = () => {
 
   const [systemLogs, setSystemLogs] = useState<AuditLogEntry[]>([]);
 
-  // Data State (Decoupled from Mock)
+  // Data State
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [traveler, setTraveler] = useState<ProductionRun | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,15 +66,18 @@ const App: React.FC = () => {
   // New State: Store the actual logged-in user object
   const [currentUser, setCurrentUser] = useState<SystemUser | null>(null);
 
-  // Subscribe to Audit Service
-  useEffect(() => {
-    const unsubscribe = auditService.subscribe((logs) => {
-      setSystemLogs([...logs]); // Create copy to trigger re-render
-    });
-    return () => unsubscribe();
-  }, []);
+  // Function to refresh inventory data
+  const refreshInventory = useCallback(async () => {
+    try {
+      const invData = await BackendAPI.getInventory();
+      setInventory(invData);
+    } catch (err) {
+      console.error("Failed to refresh inventory:", err);
+    }
+  }, []); // Only rebuild if dependencies change (none here)
 
-  // Initial Data Fetch (Phase 1: Decoupling)
+
+  // Initial Data Fetch
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -93,9 +95,18 @@ const App: React.FC = () => {
     };
 
     if (isAuthenticated) {
+      // 1. Subscribe to Audit Service
+      const unsubscribeAudit = auditService.subscribe((logs) => {
+        setSystemLogs([...logs]);
+      });
+
+      // 2. Load initial data
       loadData();
+
+      // Cleanup
+      return () => unsubscribeAudit();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated]); // Only re-run when authentication state changes
 
   // Initialize System Health Monitoring
   useEffect(() => {
@@ -387,9 +398,9 @@ const App: React.FC = () => {
           {/* Content Area */}
           <div className="flex-1 overflow-auto bg-white relative">
             {currentView === View.DASHBOARD && <Dashboard complianceMode={activeComplianceMode} />}
-            {currentView === View.INVENTORY && <InventoryView items={inventory} />}
+            {currentView === View.INVENTORY && <InventoryView items={inventory} onRefresh={refreshInventory} />}
             {currentView === View.SHOP_FLOOR && traveler && <ShopFloorView userRole={currentUserRole} traveler={traveler} />}
-            {currentView === View.TRACEABILITY && <TraceView />}
+            {currentView === View.TRACEABILITY && <TraceView currentUserRole={currentUserRole} />}
             {currentView === View.MANUFACTURING && traveler && <TravelerView traveler={traveler} complianceMode={activeComplianceMode} />}
             {currentView === View.PROCUREMENT && <ProcurementView />}
             {currentView === View.FINANCE && <FinanceView complianceMode={activeComplianceMode} />}

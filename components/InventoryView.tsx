@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { InventoryItem, ItemStatus, SensitivityLevel } from '../types';
-import { StatusBadge, TacticalCard } from './Shared';
+import { InventoryItem, ItemStatus, SensitivityLevel } from '../types.ts';
+import { StatusBadge, TacticalCard } from './Shared.tsx';
 import { Search, SlidersHorizontal, Sparkles, Plus, Edit3, X, MapPin, Zap } from 'lucide-react';
-import { askTacticalAssistant } from '../services/geminiService';
-import { telemetryService } from '../services/telemetryService';
-import { BackendAPI } from '../services/backend/api';
+import { askTacticalAssistant } from '../services/geminiService.ts';
+import { telemetryService } from '../services/telemetryService.ts';
+import { BackendAPI } from '../services/backend/api.ts';
 
 
 // --- Inventory Item Form Component ---
-const InventoryForm = ({ onClose, itemToEdit }: { onClose: () => void, itemToEdit: InventoryItem | null }) => {
+interface InventoryFormProps {
+    onClose: () => void;
+    itemToEdit: InventoryItem | null;
+    onRefresh: () => void; // New prop for refreshing parent state
+}
+
+const InventoryForm: React.FC<InventoryFormProps> = ({ onClose, itemToEdit, onRefresh }) => {
     const isEdit = !!itemToEdit;
     const [partNumber, setPartNumber] = useState(itemToEdit?.partNumber || '');
     const [nomenclature, setNomenclature] = useState(itemToEdit?.nomenclature || '');
@@ -52,9 +58,11 @@ const InventoryForm = ({ onClose, itemToEdit }: { onClose: () => void, itemToEdi
                 // C. Add New Asset
                 await BackendAPI.addInventoryItem(itemData);
             }
+            // Trigger refresh in parent (App.tsx)
+            onRefresh();
             onClose();
         } catch (e) {
-            console.error("Inventory action failed:", e);
+            console.error("Inventory action failed", e);
             setError("Failed to save inventory item. Check console for details.");
         } finally {
             setLoading(false);
@@ -135,9 +143,10 @@ const InventoryForm = ({ onClose, itemToEdit }: { onClose: () => void, itemToEdi
 
 interface InventoryViewProps {
     items: InventoryItem[];
+    onRefresh: () => void; // New prop for refreshing data
 }
 
-export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
+export const InventoryView: React.FC<InventoryViewProps> = ({ items, onRefresh }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -148,10 +157,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [itemToEdit, setItemToEdit] = useState<InventoryItem | null>(null);
 
-    // Sync props to state if items change (e.g. initial load)
+    // Sync props to state if items change (e.g. initial load OR refresh)
     useEffect(() => {
-        setDisplayedItems(items);
-    }, [items]);
+        // Only reset displayed items if there's no active search term
+        if (!searchTerm) {
+            setDisplayedItems(items);
+        }
+    }, [items, searchTerm]);
+    // The 'items' dependency ensures that when the parent re-fetches data (via onRefresh), 
+    // the displayed list is updated, provided no search is active.
 
     // Combine modal control functions
     const handleOpenEdit = (item: InventoryItem) => {
@@ -162,16 +176,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setItemToEdit(null);
-        // Re-trigger search to update displayed list after add/edit
-        if (searchTerm) {
-            // Force re-fetch by modifying search term state temporarily
-            setSearchTerm(s => s + ' ');
-            setTimeout(() => setSearchTerm(s => s.trim()), 10);
-        } else {
-            // If no search, force a full data refresh from API (optional but safe here)
-            // We rely on App.tsx to reload its 'items' prop when new data is added/updated 
-            // in a future Firestore implementation, but for now we rely on the search effect.
-        }
+        // Removed hacky refresh logic. The flow is now cleaner:
+        // InventoryForm -> onRefresh prop called -> App.tsx updates 'items' state -> useEffect above triggers a list update.
     };
 
 
@@ -192,17 +198,26 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
 
             } catch (error) {
                 console.error("Inventory search failed:", error);
+                // On search fail, revert to current main items list
+                setDisplayedItems(items);
             } finally {
                 setIsSearching(false);
             }
         };
+
+        // Skip search if items are empty (initial loading state usually)
+        if (!items.length && !searchTerm) {
+            setDisplayedItems([]);
+            setIsSearching(false);
+            return;
+        }
 
         const timeoutId = setTimeout(() => {
             performSearch();
         }, 500);
 
         return () => clearTimeout(timeoutId);
-    }, [searchTerm]);
+    }, [searchTerm, items]); // Added items dependency to ensure search reruns if list changes while searching
 
     const handleAIAnalyze = async () => {
         // B. AI Audit Simulation
@@ -231,7 +246,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
         <div className="h-full flex flex-col bg-white">
 
             {/* Inventory Form Modal */}
-            {isModalOpen && <InventoryForm onClose={handleCloseModal} itemToEdit={itemToEdit} />}
+            {isModalOpen && <InventoryForm onClose={handleCloseModal} itemToEdit={itemToEdit} onRefresh={onRefresh} />}
 
             {/* Toolbar */}
             <div className="px-4 py-4 md:px-8 md:py-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between shrink-0 border-b border-gray-50">

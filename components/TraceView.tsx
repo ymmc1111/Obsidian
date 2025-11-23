@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { TacticalCard, StatusBadge } from './Shared';
+import { TacticalCard, StatusBadge } from './Shared.tsx';
 import { Search, Package, Factory, CheckCircle2, Truck, AlertTriangle, Target, ArrowRight } from 'lucide-react';
-import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_ORDERS } from '../services/mockData';
-import { auditService } from '../services/auditService';
-import { BackendAPI } from '../services/backend/api';
-import { UserRole } from '../types'; // Import UserRole
+import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_ORDERS } from '../services/mockData.ts';
+import { auditService } from '../services/auditService.ts';
+import { BackendAPI } from '../services/backend/api.ts';
+import { UserRole } from '../types.ts';
 
 interface TraceViewProps {
-    currentUserRole: UserRole; // NEW PROP for RBAC
+    currentUserRole: UserRole; // Prop for RBAC
 }
 
-export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => { // Accept role prop
+export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => {
     const [searchTerm, setSearchTerm] = useState('SN-2024-9901');
     const [traceResult, setTraceResult] = useState<boolean>(true);
     const [isRecalling, setIsRecalling] = useState(false);
@@ -26,6 +26,8 @@ export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => { //
     const handleRecall = async () => {
         // Traceability: B. Initiate Precision Recall
         if (!isRecallAuthorized) {
+            // Updated to use custom UI alert style if needed, or simply let the browser alert fire.
+            // Sticking with `alert()` since no custom UI modal for alerts was provided for this component yet.
             alert("Authorization Denied: Only Admin or Quality Inspector can initiate a Recall.");
             return;
         }
@@ -34,14 +36,13 @@ export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => { //
 
         try {
             // In a real app, we'd derive the batch from the trace result. 
-            // Here we assume the trace revealed 'LOT-99812A' as the root cause.
             const targetBatch = 'LOT-99812A';
 
             const result = await BackendAPI.initiateRecall(targetBatch);
 
             // Log the recall action with actual user role
             auditService.logAction(
-                `${currentUserRole} (Term-800)`, // Use actual role instead of hardcoded
+                `${currentUserRole} (Term-800)`, // Uses the correct role prop
                 'RECALL_INITIATED',
                 `Batch ${result.batchLot} (${result.affectedCount} Units) set to QUARANTINE status. Action ID: ${result.actionId}`
             );

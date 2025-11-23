@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { 
-  LayoutDashboard, 
-  PackageSearch, 
+  LayoutGrid, 
+  Box, 
   Factory, 
-  Settings, 
   Menu, 
   LogOut, 
-  TerminalSquare 
+  Activity
 } from 'lucide-react';
 import { NavButton } from './components/Shared';
 import { Dashboard } from './components/Dashboard';
@@ -32,28 +31,44 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen w-screen bg-defense-950 text-slate-200 overflow-hidden">
+    <div className="flex h-screen w-screen bg-ios-bg text-ios-text overflow-hidden font-sans">
       
-      {/* Sidebar */}
-      <aside className={`bg-defense-900 border-r border-slate-800 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800">
-          {!sidebarCollapsed && <span className="font-bold tracking-widest text-defense-accent">POCKET//OPS</span>}
-          <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="text-slate-500 hover:text-white">
-            <Menu size={20} />
+      {/* Control Pad (Sidebar) */}
+      <aside className={`
+        relative z-20 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
+        flex flex-col py-6 px-3
+        ${sidebarCollapsed ? 'w-20' : 'w-72'}
+      `}>
+        {/* Logo Area */}
+        <div className="h-12 mb-8 flex items-center px-2">
+          <button 
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="flex items-center gap-3 group outline-none"
+          >
+            <div className="w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center shadow-key group-hover:scale-105 transition-transform">
+              <span className="font-display font-bold text-lg">P</span>
+            </div>
+            {!sidebarCollapsed && (
+              <div className="flex flex-col">
+                <span className="font-display font-bold text-lg tracking-tight leading-none">PocketOps</span>
+                <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wider mt-1">Defense OS</span>
+              </div>
+            )}
           </button>
         </div>
 
-        <nav className="flex-1 py-4 space-y-1">
+        {/* Navigation "Keys" */}
+        <nav className="flex-1 space-y-2">
           <NavButton 
-            icon={LayoutDashboard} 
-            label="Command Center" 
+            icon={LayoutGrid} 
+            label="Overview" 
             active={currentView === View.DASHBOARD} 
             onClick={() => setCurrentView(View.DASHBOARD)} 
             collapsed={sidebarCollapsed}
           />
           <NavButton 
-            icon={PackageSearch} 
-            label="Inventory (ARP)" 
+            icon={Box} 
+            label="Inventory" 
             active={currentView === View.INVENTORY} 
             onClick={() => setCurrentView(View.INVENTORY)} 
             collapsed={sidebarCollapsed}
@@ -67,63 +82,73 @@ const App: React.FC = () => {
           />
         </nav>
 
-        {/* Audit Stream Teaser */}
-        {!sidebarCollapsed && (
-          <div className="p-4 border-t border-slate-800">
-            <div className="flex items-center gap-2 mb-2 text-xs text-slate-500 uppercase font-bold">
-                <TerminalSquare size={12} /> Live Audit Log
+        {/* User Profile "Key" */}
+        <div className="mt-auto">
+           {!sidebarCollapsed ? (
+            <div className="bg-white rounded-2xl p-4 shadow-key border border-white/50 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-800">
+                JD
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-gray-900 truncate">J. Doe</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Clearance Lvl 4</p>
+              </div>
+              <button onClick={() => setIsAuthenticated(false)} className="text-gray-400 hover:text-red-500 transition-colors">
+                <LogOut size={18} />
+              </button>
             </div>
-            <div className="text-[10px] font-mono text-slate-400 space-y-2 opacity-70">
-                {INITIAL_LOGS.map(log => (
-                    <div key={log.id} className="truncate">
-                        <span className="text-defense-accent">{log.timestamp.split('T')[1].substring(0,8)}</span> {log.action}
-                    </div>
-                ))}
-            </div>
-          </div>
-        )}
-
-        <div className="p-2 border-t border-slate-800">
-          <NavButton 
-            icon={LogOut} 
-            label="Secure Logout" 
-            active={false} 
-            onClick={() => setIsAuthenticated(false)} 
-            collapsed={sidebarCollapsed}
-          />
+           ) : (
+             <button onClick={() => setIsAuthenticated(false)} className="w-12 h-12 rounded-2xl bg-white shadow-key flex items-center justify-center text-gray-400 hover:text-red-500">
+                <LogOut size={20} />
+             </button>
+           )}
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Header */}
-        <header className="h-16 bg-defense-900/50 backdrop-blur border-b border-slate-800 flex items-center justify-between px-6 z-10">
-          <h2 className="text-lg font-medium text-white tracking-wide">
-            {currentView === View.DASHBOARD && 'Operational Awareness'}
-            {currentView === View.INVENTORY && 'Inventory Control Grid'}
-            {currentView === View.MANUFACTURING && 'Active Traveler Control'}
-          </h2>
-          <div className="flex items-center gap-4">
-             <div className="flex flex-col items-end">
-                <span className="text-xs font-bold text-white">CPT. J. DOE</span>
-                <span className="text-[10px] text-emerald-500 font-mono">CLEARANCE: SECRET//NOFORN</span>
-             </div>
-             <div className="h-8 w-8 rounded bg-slate-700 flex items-center justify-center border border-slate-600">
-                <span className="text-xs font-bold">JD</span>
-             </div>
-          </div>
-        </header>
-
-        {/* View Content */}
-        <div className="flex-1 overflow-hidden bg-defense-950 relative">
-          {/* Background Grid Pattern */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:24px_24px] opacity-10 pointer-events-none"></div>
+      {/* Main Stage */}
+      <main className="flex-1 h-full p-4 pl-0 relative overflow-hidden">
+        <div className="h-full w-full rounded-[2.5rem] bg-white shadow-soft overflow-hidden relative flex flex-col border border-white/60">
           
-          <div className="relative h-full z-0">
+          {/* Header inside the main surface */}
+          <header className="h-20 flex items-center justify-between px-8 border-b border-gray-100 shrink-0">
+            <div>
+              <h2 className="text-2xl font-display font-bold tracking-tight text-gray-900">
+                {currentView === View.DASHBOARD && 'Mission Control'}
+                {currentView === View.INVENTORY && 'Materials & Assets'}
+                {currentView === View.MANUFACTURING && 'Assembly Line'}
+              </h2>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="px-4 py-1.5 rounded-full bg-gray-50 border border-gray-200 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-xs font-medium text-gray-600">System Optimal</span>
+              </div>
+            </div>
+          </header>
+
+          {/* Content Area */}
+          <div className="flex-1 overflow-hidden bg-white relative">
              {currentView === View.DASHBOARD && <Dashboard />}
              {currentView === View.INVENTORY && <InventoryView items={INITIAL_INVENTORY} />}
              {currentView === View.MANUFACTURING && <TravelerView traveler={MOCK_TRAVELER} />}
           </div>
+
+          {/* Live Audit Ticker (Bottom) */}
+          <div className="h-10 bg-gray-50 border-t border-gray-100 flex items-center px-6 gap-4 overflow-hidden shrink-0">
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 shrink-0">
+              <Activity size={12} /> System Logs
+            </div>
+            <div className="flex items-center gap-8 overflow-hidden">
+              {INITIAL_LOGS.map((log, i) => (
+                 <div key={i} className="flex items-center gap-2 text-xs font-mono text-gray-500 whitespace-nowrap opacity-60">
+                    <span className="text-gray-300">|</span>
+                    <span>{log.timestamp.split('T')[1].substring(0,5)}</span>
+                    <span className="font-medium text-gray-700">{log.action}</span>
+                 </div>
+              ))}
+            </div>
+          </div>
+
         </div>
       </main>
     </div>

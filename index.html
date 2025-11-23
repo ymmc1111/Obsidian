@@ -3,46 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PocketOps Defense | Adaptive Resource Platform</title>
+    <title>PocketOps | Industrial Grade</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         theme: {
           extend: {
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
+              display: ['Inter Tight', 'sans-serif'], // For that "printed on plastic" look
               mono: ['JetBrains Mono', 'monospace'],
             },
             colors: {
-              defense: {
-                950: '#020617', // Deep slate
-                900: '#0f172a',
-                800: '#1e293b',
-                accent: '#10b981', // Emerald
-                warn: '#f59e0b', // Amber
-                alert: '#ef4444', // Rose
+              ios: {
+                bg: '#F5F5F7', // Light gray background
+                surface: '#FFFFFF',
+                text: '#1D1D1F',
+                subtext: '#86868B',
+                border: '#D2D2D7',
+                blue: '#007AFF',
+                orange: '#FF3B30', // International Safety Orange
+                green: '#34C759',
               }
+            },
+            borderRadius: {
+              '4xl': '2rem', // For the squircle key shape
+            },
+            boxShadow: {
+              'soft': '0 10px 30px -10px rgba(0,0,0,0.05)',
+              'key': '0 2px 5px rgba(0,0,0,0.05), 0 1px 1px rgba(0,0,0,0.02)', // Tactile key shadow
+              'key-pressed': 'inset 0 2px 4px rgba(0,0,0,0.05)',
             }
           }
         }
       }
     </script>
     <style>
-      /* Custom scrollbar for that technical feel */
+      body {
+        background-color: #F5F5F7;
+        color: #1D1D1F;
+      }
+      /* Hide scrollbar for cleaner aesthetic */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #0f172a; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #334155; 
-        border-radius: 2px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #475569; 
+        width: 0px;
+        background: transparent;
       }
     </style>
   <script type="importmap">
@@ -58,7 +65,7 @@
 }
 </script>
 </head>
-  <body class="bg-defense-950 text-slate-300 antialiased overflow-hidden h-screen w-screen">
+  <body class="bg-ios-bg text-ios-text antialiased overflow-hidden h-screen w-screen selection:bg-ios-text selection:text-white">
     <div id="root"></div>
   </body>
 </html>

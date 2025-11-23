@@ -1,24 +1,22 @@
 import React, { useState } from 'react';
 import { ProductionRun, TravelerStep } from '../types';
 import { TacticalCard, StatusBadge } from './Shared';
-import { CheckCircle2, Circle, AlertCircle, FileText } from 'lucide-react';
+import { Check, Circle, AlertTriangle, FileText, ArrowRight } from 'lucide-react';
 
 interface TravelerViewProps {
   traveler: ProductionRun;
 }
 
 export const TravelerView: React.FC<TravelerViewProps> = ({ traveler }) => {
-  // Simulate local state for step completion
   const [steps, setSteps] = useState<TravelerStep[]>(traveler.steps);
-  const currentStep = steps.find(s => !s.completed);
-
+  
   const toggleStep = (id: string) => {
     setSteps(prev => prev.map(step => {
         if (step.id === id) {
             return { 
                 ...step, 
                 completed: !step.completed, 
-                completedBy: !step.completed ? 'Current User' : undefined,
+                completedBy: !step.completed ? 'J. Doe' : undefined,
                 timestamp: !step.completed ? new Date().toISOString() : undefined
             };
         }
@@ -26,122 +24,136 @@ export const TravelerView: React.FC<TravelerViewProps> = ({ traveler }) => {
     }));
   };
 
+  // Calculate progress
+  const completedCount = steps.filter(s => s.completed).length;
+  const progress = (completedCount / steps.length) * 100;
+
   return (
-    <div className="p-6 h-full flex flex-col gap-6 overflow-y-auto">
-        {/* Traveler Header */}
-        <div className="flex justify-between items-start">
-            <div>
-                <div className="flex items-center gap-3 mb-1">
-                    <h1 className="text-2xl font-bold font-mono text-white">{traveler.id}</h1>
-                    <StatusBadge status={traveler.status} />
+    <div className="h-full flex flex-col bg-white">
+        
+        {/* Header / Progress */}
+        <div className="px-8 py-8 border-b border-gray-50">
+            <div className="flex justify-between items-start mb-6">
+                <div>
+                    <div className="flex items-center gap-4 mb-2">
+                        <h1 className="text-3xl font-display font-bold text-gray-900 tracking-tight">{traveler.id}</h1>
+                        <StatusBadge status={traveler.status} />
+                    </div>
+                    <p className="text-gray-500 font-medium">{traveler.partNumber} &bull; Qty: {traveler.quantity}</p>
                 </div>
-                <p className="text-slate-400 text-sm">Target: <span className="text-slate-200">{traveler.partNumber}</span> (Qty: {traveler.quantity})</p>
+                <div className="text-right">
+                     <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Trace ID</span>
+                     <p className="font-mono text-sm text-gray-800 mt-1">8F-99-2A-11</p>
+                </div>
             </div>
-            <div className="text-right">
-                <p className="text-xs text-slate-500 uppercase font-mono">Traceability ID</p>
-                <p className="font-mono text-defense-accent">UUID-{Math.random().toString(16).slice(2, 8).toUpperCase()}</p>
+            
+            {/* Progress Bar */}
+            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                    className="h-full bg-black transition-all duration-500 ease-out"
+                    style={{ width: `${progress}%` }}
+                ></div>
             </div>
         </div>
 
-        {/* Genealogy / Tree Mockup */}
-        <div className="bg-slate-900/50 p-4 border border-slate-800 rounded flex items-center gap-4 text-xs font-mono">
-            <span className="text-slate-500 uppercase">Genealogy Path:</span>
-            <span className="bg-slate-800 px-2 py-1 rounded">Project Alpha</span>
-            <span className="text-slate-600">→</span>
-            <span className="bg-slate-800 px-2 py-1 rounded">Propulsion Sub-Assy</span>
-            <span className="text-slate-600">→</span>
-            <span className="bg-emerald-900/30 text-emerald-400 border border-emerald-900 px-2 py-1 rounded">Current Item</span>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Steps List */}
-            <div className="lg:col-span-2 space-y-4">
-                {steps.map((step, index) => {
-                    const isActive = !step.completed && (!steps[index - 1] || steps[index - 1].completed);
-                    return (
-                        <div 
-                            key={step.id} 
-                            className={`relative border rounded-lg p-4 transition-all ${
-                                isActive 
-                                    ? 'bg-defense-800 border-defense-accent shadow-[0_0_15px_-5px_rgba(16,185,129,0.3)]' 
-                                    : 'bg-defense-900 border-slate-800 opacity-80'
-                            }`}
-                        >
-                            <div className="flex justify-between items-start mb-2">
-                                <div className="flex items-center gap-3">
-                                    <div className="text-xs font-mono font-bold text-slate-500">OP {step.order * 10}</div>
-                                    <h3 className={`font-medium ${step.completed ? 'text-emerald-500' : 'text-slate-200'}`}>
-                                        {step.instruction}
-                                    </h3>
-                                </div>
-                                {step.completed ? (
-                                    <CheckCircle2 className="text-emerald-500" size={20} />
-                                ) : (
-                                    <Circle className="text-slate-600" size={20} />
-                                )}
-                            </div>
-
-                            {/* Metadata */}
-                            <div className="flex flex-wrap gap-4 text-xs font-mono text-slate-500 mt-2">
-                                <span className="flex items-center gap-1">
-                                    <FileText size={12}/> Role: {step.requiredRole}
-                                </span>
-                                {step.timestamp && (
-                                    <span>Time: {new Date(step.timestamp).toLocaleTimeString()}</span>
-                                )}
-                                {step.completedBy && (
-                                    <span>Auth: {step.completedBy}</span>
-                                )}
-                            </div>
-
-                            {/* Inputs */}
-                            {isActive && (
-                                <div className="mt-4 pt-4 border-t border-slate-700/50">
-                                    {step.inputs?.map((input, idx) => (
-                                        <div key={idx} className="mb-3">
-                                            <label className="block text-xs uppercase text-slate-400 mb-1">{input.label}</label>
-                                            <input 
-                                                type="text" 
-                                                className="w-full bg-black/30 border border-slate-600 rounded p-2 text-sm focus:border-defense-accent focus:outline-none text-white font-mono"
-                                                placeholder={input.type === 'passfail' ? "Enter PASS / FAIL" : "Data Input..."} 
-                                            />
-                                        </div>
-                                    ))}
-                                    <button 
-                                        onClick={() => toggleStep(step.id)}
-                                        className="mt-2 w-full bg-defense-accent hover:bg-emerald-600 text-slate-900 font-bold py-2 rounded text-sm uppercase tracking-wide transition"
-                                    >
-                                        Digitally Sign & Complete
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Side Panel (Docs & NCRs) */}
-            <div className="space-y-4">
-                <TacticalCard title="Documents" className="min-h-[200px]">
-                    <ul className="space-y-2 text-sm text-slate-400">
-                        <li className="flex items-center gap-2 hover:text-defense-accent cursor-pointer">
-                            <FileText size={14}/> DWG-1024-RevC.pdf
-                        </li>
-                        <li className="flex items-center gap-2 hover:text-defense-accent cursor-pointer">
-                            <FileText size={14}/> SPEC-MIL-STD-810.pdf
-                        </li>
-                    </ul>
-                </TacticalCard>
+        <div className="flex-1 overflow-y-auto p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
-                <TacticalCard title="Stop Work / NCR">
-                    <button className="w-full border border-rose-600 text-rose-500 hover:bg-rose-900/20 py-3 rounded uppercase font-bold text-sm flex items-center justify-center gap-2 transition">
-                        <AlertCircle size={18} />
-                        Raise Non-Conformance
+                {/* Steps Column */}
+                <div className="lg:col-span-2 space-y-6">
+                    {steps.map((step, index) => {
+                        const isActive = !step.completed && (!steps[index - 1] || steps[index - 1].completed);
+                        const isFuture = !step.completed && !isActive;
+                        
+                        return (
+                            <div 
+                                key={step.id} 
+                                className={`
+                                    relative p-6 rounded-3xl border transition-all duration-300
+                                    ${isActive 
+                                        ? 'bg-white border-black/10 shadow-soft ring-1 ring-black/5' 
+                                        : step.completed ? 'bg-gray-50 border-transparent opacity-75' : 'bg-white border-gray-100 opacity-50'
+                                    }
+                                `}
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div className="flex gap-5">
+                                        <div className={`
+                                            w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm
+                                            ${step.completed ? 'bg-green-100 text-green-600' : isActive ? 'bg-black text-white' : 'bg-gray-100 text-gray-400'}
+                                        `}>
+                                            {step.completed ? <Check size={20} strokeWidth={3} /> : step.order}
+                                        </div>
+                                        <div>
+                                            <h3 className={`text-lg font-bold tracking-tight ${step.completed ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                                                {step.instruction}
+                                            </h3>
+                                            <div className="flex gap-4 mt-2 text-xs font-medium text-gray-400 uppercase tracking-wide">
+                                                <span>Role: {step.requiredRole}</span>
+                                                {step.completedBy && <span className="text-green-600">Signed: {step.completedBy}</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Active Step Inputs */}
+                                {isActive && (
+                                    <div className="mt-6 pl-15 ml-[3.75rem]">
+                                        {step.inputs?.map((input, idx) => (
+                                            <div key={idx} className="mb-4">
+                                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{input.label}</label>
+                                                <input 
+                                                    type="text" 
+                                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                                    placeholder="Enter data..."
+                                                />
+                                            </div>
+                                        ))}
+                                        <button 
+                                            onClick={() => toggleStep(step.id)}
+                                            className="mt-2 px-6 py-3 bg-black hover:bg-gray-800 text-white rounded-xl font-bold text-sm shadow-key transition-transform active:scale-95 flex items-center gap-2"
+                                        >
+                                            <span>Verify & Sign</span>
+                                            <ArrowRight size={16} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Right Panel */}
+                <div className="space-y-6">
+                    <TacticalCard title="Attached Docs">
+                        <ul className="space-y-3">
+                            <li className="flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50 cursor-pointer transition-colors group">
+                                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
+                                    <FileText size={20} />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold text-gray-900">Blueprint A-10</p>
+                                    <p className="text-xs text-gray-400">PDF &bull; 2.4MB</p>
+                                </div>
+                            </li>
+                            <li className="flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50 cursor-pointer transition-colors group">
+                                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
+                                    <FileText size={20} />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold text-gray-900">Spec Sheet</p>
+                                    <p className="text-xs text-gray-400">PDF &bull; 800KB</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </TacticalCard>
+
+                    <button className="w-full p-4 rounded-3xl bg-red-50 hover:bg-red-100 border border-red-100 flex items-center justify-center gap-3 group transition-all">
+                        <AlertTriangle className="text-red-500" />
+                        <span className="font-bold text-red-600">Report Issue</span>
                     </button>
-                    <p className="text-xs text-slate-500 mt-2 text-center">
-                        Initiating an NCR will freeze this workflow immediately.
-                    </p>
-                </TacticalCard>
+                </div>
+
             </div>
         </div>
     </div>

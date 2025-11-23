@@ -33,6 +33,7 @@ import { Login } from './components/Login';
 import { INITIAL_INVENTORY, MOCK_TRAVELER } from './services/mockData';
 import { auditService } from './services/auditService';
 import { telemetryService } from './services/telemetryService';
+import { monitoringService } from './services/monitoringService';
 import { ComplianceMode, UserRole, AuditLogEntry } from './types';
 
 enum View {
@@ -67,6 +68,21 @@ const App: React.FC = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // Initialize System Health Monitoring
+  useEffect(() => {
+    if (isAuthenticated) {
+        // Run initial check
+        monitoringService.runHealthChecks();
+
+        // Establish periodic watchdog (every 60s)
+        const intervalId = setInterval(() => {
+            monitoringService.runHealthChecks();
+        }, 60000);
+
+        return () => clearInterval(intervalId);
+    }
+  }, [isAuthenticated]);
 
   // Close mobile menu when view changes
   useEffect(() => {

@@ -58,6 +58,20 @@ class TelemetryService {
   incrementCounter(name: string, tags: Record<string, string> = {}) {
     console.debug(`[Metric] Counter Inc: ${name}`, tags);
   }
+
+  // Database Query Monitoring (Infrastructure Layer)
+  recordDBQuery(query: string, durationMs: number) {
+      const tags = { query_signature: query.substring(0, 50) + '...' };
+      
+      // Threshold check: >200ms is considered slow in this high-performance context
+      if (durationMs > 200) {
+          console.warn(`[Telemetry] SLOW QUERY DETECTED: ${durationMs.toFixed(2)}ms`, query);
+          this.recordMetric('db_query_duration_slow', durationMs, tags);
+          this.incrementCounter('db_slow_query_count', tags);
+      } else {
+          this.recordMetric('db_query_duration', durationMs, tags);
+      }
+  }
 }
 
 export const telemetryService = new TelemetryService();

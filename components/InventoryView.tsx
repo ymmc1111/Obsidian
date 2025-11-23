@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { InventoryItem } from '../types';
 import { StatusBadge } from './Shared';
 import { Search, SlidersHorizontal, Sparkles } from 'lucide-react';
@@ -14,6 +14,21 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Simulate Database Query Monitoring
+  useEffect(() => {
+    // Only trace if there is a search term or initial load
+    const queryName = searchTerm ? `SELECT * FROM inventory WHERE filter LIKE '${searchTerm}%'` : 'SELECT * FROM inventory LIMIT 50';
+    
+    // Simulate fake network/DB latency
+    // 10% chance of a "Slow Query" (>200ms) to demo the alerting capability
+    const mockLatency = Math.random() > 0.9 ? Math.floor(Math.random() * 300) + 200 : Math.floor(Math.random() * 50) + 10;
+    
+    setTimeout(() => {
+        telemetryService.recordDBQuery(queryName, mockLatency);
+    }, mockLatency);
+
+  }, [searchTerm]);
 
   const filteredItems = items.filter(i => 
     i.partNumber.toLowerCase().includes(searchTerm.toLowerCase()) || 

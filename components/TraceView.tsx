@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TacticalCard, StatusBadge, Toast } from './Shared.tsx';
-import { Search, Package, Factory, CheckCircle2, Truck, AlertTriangle, Target, ArrowRight, History, X, AlertOctagon } from 'lucide-react';
+import { Search, Package, Factory, CheckCircle2, Truck, AlertTriangle, Target, ArrowRight, History, X, AlertOctagon, Download, Filter } from 'lucide-react';
 import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_ORDERS } from '../services/mockData.ts';
 import { auditService } from '../services/auditService.ts';
 import { BackendAPI } from '../services/backend/api.ts';
@@ -12,7 +12,8 @@ interface TraceViewProps {
 
 export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => {
     const [searchTerm, setSearchTerm] = useState('SN-2024-9901');
-    const [traceResult, setTraceResult] = useState<boolean>(true);
+    const [searchType, setSearchType] = useState<'serial' | 'batch'>('serial');
+    const [traceResult, setTraceResult] = useState<any | null>(null);
     const [isRecalling, setIsRecalling] = useState(false);
     const [showRecallModal, setShowRecallModal] = useState(false);
     const [recallHistory, setRecallHistory] = useState<AuditLogEntry[]>([]);
@@ -35,8 +36,103 @@ export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => {
     const isRecallAuthorized = currentUserRole === UserRole.ADMIN || currentUserRole === UserRole.QUALITY_INSPECTOR;
 
     const handleTrace = () => {
-        // Mock trace logic - always finds the "demo" item
-        setTraceResult(true);
+        if (!searchTerm.trim()) {
+            showToast("Please enter a search term", 'error');
+            return;
+        }
+
+        // Mock trace logic based on search type
+        if (searchType === 'serial') {
+            // Search by Serial Number
+            const item = INITIAL_INVENTORY.find(inv =>
+                inv.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            if (item) {
+                setTraceResult({
+                    type: 'serial',
+                    serialNumber: item.serialNumber,
+                    partNumber: item.partNumber,
+                    batchLot: item.batchLot,
+                    status: item.status,
+                    found: true
+                });
+                showToast(`Serial Number ${item.serialNumber} found`, 'success');
+            } else {
+                setTraceResult({ found: false, type: 'serial' });
+                showToast("Serial Number not found", 'error');
+            }
+        } else {
+            // Search by Batch Lot
+            const items = INITIAL_INVENTORY.filter(inv =>
+                inv.batchLot?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            if (items.length > 0) {
+                setTraceResult({
+                    type: 'batch',
+                    batchLot: items[0].batchLot,
+                    items: items,
+                    count: items.length,
+                    found: true
+                });
+                showToast(`Batch Lot ${items[0].batchLot}: ${items.length} items found`, 'success');
+            } else {
+                setTraceResult({ found: false, type: 'batch' });
+                showToast("Batch Lot not found", 'error');
+            }
+        }
+    };
+
+    const handleExportReport = () => {
+        if (!traceResult || !traceResult.found) {
+            showToast("No trace data to export", 'error');
+            return;
+        }
+
+        // Generate report content
+        let reportContent = `TRACEABILITY REPORT\n`;
+        reportContent += `Generated: ${new Date().toLocaleString()}\n`;
+        reportContent += `Search Type: ${searchType === 'serial' ? 'Serial Number' : 'Batch Lot'}\n`;
+        reportContent += `Search Term: ${searchTerm}\n\n`;
+        reportContent += `===========================================\n\n`;
+
+        if (searchType === 'serial') {
+            reportContent += `SERIAL NUMBER TRACE\n\n`;
+            reportContent += `Serial Number: ${traceResult.serialNumber}\n`;
+            reportContent += `Part Number: ${traceResult.partNumber}\n`;
+            reportContent += `Batch Lot: ${traceResult.batchLot}\n`;
+            reportContent += `Status: ${traceResult.status}\n\n`;
+            reportContent += `GENEALOGY CHAIN:\n`;
+            reportContent += `1. Raw Material: Titanium Alloy 6Al-4V (LOT-99812A)\n`;
+            reportContent += `2. Production Run: RUN-2024-A (Operator: M. Smith)\n`;
+            reportContent += `3. Finished Good: ${traceResult.partNumber} (${traceResult.serialNumber})\n`;
+            reportContent += `4. Fulfillment: SO-8821 (Customer: SpaceX)\n`;
+        } else {
+            reportContent += `BATCH LOT TRACE\n\n`;
+            reportContent += `Batch Lot: ${traceResult.batchLot}\n`;
+            reportContent += `Total Items: ${traceResult.count}\n\n`;
+            reportContent += `AFFECTED ITEMS:\n`;
+            traceResult.items.forEach((item: any, idx: number) => {
+                reportContent += `${idx + 1}. ${item.partNumber} - S/N: ${item.serialNumber} - Status: ${item.status}\n`;
+            });
+        }
+
+        reportContent += `\n===========================================\n`;
+        reportContent += `This is an official traceability document.\n`;
+        reportContent += `Hash: 0x${Math.random().toString(16).substring(2, 18)}\n`;
+
+        // Create blob and download
+        const blob = new Blob([reportContent], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Trace_Report_${searchTerm}_${Date.now()}.txt`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast("Trace report exported successfully", 'success');
     };
 
     const handleRecallClick = () => {
@@ -77,14 +173,46 @@ export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => {
         <div className="h-full flex flex-col bg-white p-4 md:p-8 gap-6 overflow-y-auto">
 
             {/* Search Bar */}
-            <div className="w-full max-w-2xl mx-auto relative">
+            <div className="w-full max-w-2xl mx-auto space-y-4">
+                {/* Search Type Selector */}
+                <div className="flex gap-2 justify-center">
+                    <button
+                        onClick={() => {
+                            setSearchType('serial');
+                            setSearchTerm('SN-2024-9901');
+                        }}
+                        className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${searchType === 'serial'
+                                ? 'bg-black text-white shadow-key'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                    >
+                        <Filter size={14} className="inline mr-2" />
+                        Serial Number
+                    </button>
+                    <button
+                        onClick={() => {
+                            setSearchType('batch');
+                            setSearchTerm('LOT-99812A');
+                        }}
+                        className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${searchType === 'batch'
+                                ? 'bg-black text-white shadow-key'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                    >
+                        <Filter size={14} className="inline mr-2" />
+                        Batch Lot
+                    </button>
+                </div>
+
+                {/* Search Input */}
                 <div className="relative group">
                     <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
                     <input
                         type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Enter Serial Number, Batch Lot, or CoC ID..."
+                        onKeyPress={(e) => e.key === 'Enter' && handleTrace()}
+                        placeholder={searchType === 'serial' ? 'Enter Serial Number...' : 'Enter Batch Lot...'}
                         className="w-full bg-gray-50 hover:bg-gray-100 focus:bg-white border border-transparent focus:border-gray-200 rounded-2xl py-3.5 pl-12 pr-32 text-sm font-medium text-gray-900 focus:ring-4 focus:ring-gray-100 outline-none transition-all"
                     />
                     <button
@@ -97,32 +225,47 @@ export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => {
             </div>
 
             {/* Trace Visualization Area */}
-            {traceResult && (
+            {traceResult && traceResult.found && (
                 <div className="flex-1 flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="text-xl font-display font-bold text-gray-900">Asset Genealogy Tree</h2>
-                            <p className="text-sm text-gray-500 mt-1">Full lifecycle traceability for <span className="font-mono font-bold text-gray-800">{searchTerm}</span></p>
+                            <p className="text-sm text-gray-500 mt-1">
+                                {searchType === 'serial' ? (
+                                    <>Full lifecycle traceability for <span className="font-mono font-bold text-gray-800">{traceResult.serialNumber}</span></>
+                                ) : (
+                                    <>Batch traceability for <span className="font-mono font-bold text-gray-800">{traceResult.batchLot}</span> ({traceResult.count} items)</>
+                                )}
+                            </p>
                         </div>
-                        <button
-                            onClick={handleRecallClick}
-                            disabled={isRecalling || !isRecallAuthorized} // Disabled based on role
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-colors
-                                ${isRecallAuthorized
-                                    ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100'
-                                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                }
-                            `}
-                            title={!isRecallAuthorized ? 'Requires Admin or Quality Inspector role' : 'Initiate product recall'}
-                        >
-                            {isRecalling ? 'Processing...' : (
-                                <>
-                                    <AlertTriangle size={16} />
-                                    Initiate Precision Recall (B)
-                                </>
-                            )}
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleExportReport}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors"
+                            >
+                                <Download size={16} />
+                                Export Report
+                            </button>
+                            <button
+                                onClick={handleRecallClick}
+                                disabled={isRecalling || !isRecallAuthorized}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-colors
+                                    ${isRecallAuthorized
+                                        ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100'
+                                        : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                    }
+                                `}
+                                title={!isRecallAuthorized ? 'Requires Admin or Quality Inspector role' : 'Initiate product recall'}
+                            >
+                                {isRecalling ? 'Processing...' : (
+                                    <>
+                                        <AlertTriangle size={16} />
+                                        Initiate Recall
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
 
                     {/* Genealogy Flow */}

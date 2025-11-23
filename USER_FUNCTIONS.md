@@ -130,12 +130,12 @@ This document outlines all the core functions users should be able to perform in
 | Function | Status | User Roles | Action | Goal |
 |---|---|---|---|---|
 | View Genealogy Graph | ✅ | All | See visual tree of material flow | Understand product lineage |
-| Trace by Serial Number | 📋 | Quality Inspector, Logistics Specialist | Search by S/N to view full lifecycle | Determine origin and destination |
-| Trace by Batch Lot | 📋 | Quality Inspector, Logistics Specialist | Search by Lot to see all affected items | Identify scope of quality issues |
+| Trace by Serial Number | ✅ | Quality Inspector, Logistics Specialist | Search by S/N to view full lifecycle | Determine origin and destination |
+| Trace by Batch Lot | ✅ | Quality Inspector, Logistics Specialist | Search by Lot to see all affected items | Identify scope of quality issues |
 | Initiate Precision Recall | ✅ | Admin, Quality Inspector | Flag all items in Batch Lot to QUARANTINE | Execute compliance‑mandated recalls |
 | View Recall History | ✅ | Admin, Quality Inspector | See all past recall actions | Audit recall effectiveness |
 | Generate CoC | ✅ | Quality Inspector, Admin | Create Certificate of Conformance for order | Provide compliance documentation |
-| Export Trace Report | 📋 | Quality Inspector | Download genealogy as PDF | Provide to auditors or customers |
+| Export Trace Report | ✅ | Quality Inspector | Download genealogy as PDF | Provide to auditors or customers |
 
 ### 6. Sales Orders & Logistics
 | Function | Status | User Roles | Action | Goal |

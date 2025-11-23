@@ -23,6 +23,7 @@ import { AdminView } from './components/AdminView';
 import { PlanningView } from './components/PlanningView';
 import { Login } from './components/Login';
 import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_LOGS } from './services/mockData';
+import { ComplianceMode } from './types';
 
 enum View {
   DASHBOARD,
@@ -39,6 +40,7 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState<View>(View.DASHBOARD);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeComplianceMode, setActiveComplianceMode] = useState<ComplianceMode>(ComplianceMode.DEFENCE);
 
   if (!isAuthenticated) {
     return <Login onLogin={() => setIsAuthenticated(true)} />;
@@ -176,22 +178,22 @@ const App: React.FC = () => {
             </div>
             <div className="flex items-center gap-4">
               <div className="px-4 py-1.5 rounded-full bg-gray-50 border border-gray-200 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                <span className="text-xs font-medium text-gray-600">System Optimal</span>
+                <div className={`w-2 h-2 rounded-full ${activeComplianceMode === ComplianceMode.DEFENCE ? 'bg-green-500' : 'bg-blue-500'} animate-pulse`}></div>
+                <span className="text-xs font-medium text-gray-600">Mode: {activeComplianceMode}</span>
               </div>
             </div>
           </header>
 
           {/* Content Area */}
           <div className="flex-1 overflow-hidden bg-white relative">
-             {currentView === View.DASHBOARD && <Dashboard />}
+             {currentView === View.DASHBOARD && <Dashboard complianceMode={activeComplianceMode} />}
              {currentView === View.INVENTORY && <InventoryView items={INITIAL_INVENTORY} />}
-             {currentView === View.MANUFACTURING && <TravelerView traveler={MOCK_TRAVELER} />}
+             {currentView === View.MANUFACTURING && <TravelerView traveler={MOCK_TRAVELER} complianceMode={activeComplianceMode} />}
              {currentView === View.PROCUREMENT && <ProcurementView />}
-             {currentView === View.FINANCE && <FinanceView />}
-             {currentView === View.ORDERS && <OrdersView />}
+             {currentView === View.FINANCE && <FinanceView complianceMode={activeComplianceMode} />}
+             {currentView === View.ORDERS && <OrdersView complianceMode={activeComplianceMode} />}
              {currentView === View.PLANNING && <PlanningView />}
-             {currentView === View.ADMIN && <AdminView />}
+             {currentView === View.ADMIN && <AdminView activeMode={activeComplianceMode} setMode={setActiveComplianceMode} />}
           </div>
 
           {/* Live Audit Ticker (Bottom) */}

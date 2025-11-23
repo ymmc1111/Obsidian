@@ -2,7 +2,7 @@
 import { 
   InventoryItem, ItemStatus, SensitivityLevel, AuditLogEntry, ProductionRun,
   Vendor, PurchaseOrder, PurchaseOrderStatus, Invoice, InvoiceStatus, SalesOrder, SalesOrderStatus,
-  SystemUser, UserRole, ProductionSchedule
+  SystemUser, UserRole, ProductionSchedule, CertificateOfConformance, ComplianceMode
 } from '../types';
 
 export const INITIAL_INVENTORY: InventoryItem[] = [
@@ -209,3 +209,32 @@ export const INITIAL_SCHEDULES: ProductionSchedule[] = [
   { id: 'SCH-2024-103', partNumber: 'AL-SHEET-7075', plannedQty: 100, startDate: '2024-10-28', machineCenter: 'Cutting-Bay-1', loadFactor: 92, status: 'Delayed' },
   { id: 'SCH-2024-104', partNumber: 'THRUSTER-NZL-09', plannedQty: 4, startDate: '2024-11-12', machineCenter: '3D-Print-Metal', loadFactor: 60, status: 'In Progress' },
 ];
+
+export const generateCoC = (salesOrderId: string, mode: ComplianceMode = ComplianceMode.DEFENCE): CertificateOfConformance => {
+    const order = INITIAL_ORDERS.find(o => o.id === salesOrderId);
+    const traceItem = INITIAL_INVENTORY.find(i => i.id === 'INV-002'); // Mock trace
+
+    let statement = 'Product conforms to AS9100D and meets all ITAR requirements.';
+    
+    if (mode === ComplianceMode.PHARMA_US) {
+        statement = 'Product conforms to FDA 21 CFR Part 11 and GxP standards.';
+    } else if (mode === ComplianceMode.PHARMA_EU) {
+        statement = 'Product conforms to EU GMP Annex 11 requirements.';
+    } else if (mode === ComplianceMode.GCAP) {
+        statement = 'Product conforms to Global Compliance & Audit Protocols.';
+    }
+
+    return {
+        id: `COC-${Math.floor(Math.random() * 10000)}`,
+        salesOrderId: salesOrderId,
+        partNumber: 'ASM-THRUSTER-NOZZLE', // Mock
+        quantityShipped: 1, // Mock
+        finalInspectionStatus: 'Passed',
+        digitalSignature: `SIG-RSA-4096-${Math.floor(Math.random() * 99999)}`,
+        rawMaterialTrace: [
+            { item: traceItem?.nomenclature || 'Raw Material', lotNumber: traceItem?.batchLot || 'LOT-UNKNOWN', vendorCage: traceItem?.cageCode || 'UNKNOWN' }
+        ],
+        complianceStatement: statement,
+        complianceMode: mode
+    };
+};

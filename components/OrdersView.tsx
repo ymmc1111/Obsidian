@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
-import { INITIAL_ORDERS } from '../services/mockData';
-import { TacticalCard, StatusBadge } from './Shared';
-import { Globe, Truck, RotateCcw, Box, RefreshCcw } from 'lucide-react';
-import { SalesOrder } from '../types';
 
-export const OrdersView: React.FC = () => {
+import React, { useState } from 'react';
+import { INITIAL_ORDERS, generateCoC } from '../services/mockData';
+import { TacticalCard, StatusBadge } from './Shared';
+import { Globe, Truck, RotateCcw, Box, RefreshCcw, FileCheck, CheckCircle2 } from 'lucide-react';
+import { SalesOrder, CertificateOfConformance, ComplianceMode } from '../types';
+
+interface OrdersViewProps {
+    complianceMode: ComplianceMode;
+}
+
+export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
   const [orders, setOrders] = useState<SalesOrder[]>(INITIAL_ORDERS);
+  const [generatedCoC, setGeneratedCoC] = useState<CertificateOfConformance | null>(null);
 
   // Action: Reroute Order
   const rerouteOrder = (id: string) => {
@@ -20,8 +26,15 @@ export const OrdersView: React.FC = () => {
     }));
   };
 
+  const handleGenerateCoC = () => {
+      if (orders.length > 0) {
+          const coc = generateCoC(orders[0].id, complianceMode);
+          setGeneratedCoC(coc);
+      }
+  };
+
   return (
-    <div className="h-full flex flex-col bg-white p-8 gap-6 overflow-y-auto">
+    <div className="h-full flex flex-col bg-white p-8 gap-6 overflow-y-auto relative">
       
       {/* Top Logic Engines */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -75,7 +88,13 @@ export const OrdersView: React.FC = () => {
       <div className="flex-1 bg-white rounded-3xl shadow-soft border border-gray-100 p-6 overflow-hidden flex flex-col">
          <div className="flex justify-between items-center mb-6">
             <h3 className="font-display text-lg font-semibold tracking-tight text-gray-900">Global Sales Orders</h3>
-            <button className="text-sm font-medium text-gray-400 hover:text-black">Export Manifest</button>
+            <button 
+                onClick={handleGenerateCoC}
+                className="flex items-center gap-2 text-sm font-bold bg-black text-white px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors shadow-key"
+            >
+                <FileCheck size={16} />
+                Generate CoC
+            </button>
          </div>
          
          <div className="overflow-auto">
@@ -128,6 +147,52 @@ export const OrdersView: React.FC = () => {
             </table>
          </div>
       </div>
+
+       {/* CoC Modal / Notification */}
+       {generatedCoC && (
+           <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/60 backdrop-blur-sm">
+                <div className="bg-white rounded-[2rem] shadow-2xl p-8 border border-gray-100 max-w-md w-full animate-in fade-in zoom-in-95 duration-300">
+                    <div className="flex items-center justify-center mb-6 text-green-500">
+                        <CheckCircle2 size={48} />
+                    </div>
+                    <div className="text-center mb-6">
+                        <h3 className="text-2xl font-display font-bold text-gray-900">CoC Generated</h3>
+                        <p className="text-gray-500 mt-1">Official Compliance Artifact Created</p>
+                    </div>
+                    
+                    <div className="space-y-4 bg-gray-50 p-6 rounded-2xl mb-6">
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Document ID</span>
+                            <span className="font-mono font-bold text-gray-900">{generatedCoC.id}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                             <span className="text-gray-500">Compliance Mode</span>
+                             <span className="font-bold text-gray-900">{generatedCoC.complianceMode}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Inspection</span>
+                            <span className="font-bold text-green-600">{generatedCoC.finalInspectionStatus}</span>
+                        </div>
+                        <div className="pt-2 border-t border-gray-200">
+                             <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Digital Signature</p>
+                             <p className="font-mono text-[10px] text-gray-500 break-all">{generatedCoC.digitalSignature}</p>
+                        </div>
+                        <div className="pt-2 border-t border-gray-200">
+                             <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Statement</p>
+                             <p className="text-xs text-gray-800 italic">{generatedCoC.complianceStatement}</p>
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={() => setGeneratedCoC(null)}
+                        className="w-full py-4 bg-black text-white rounded-2xl font-bold shadow-key hover:bg-gray-800 transition-colors"
+                    >
+                        Dismiss & Archive
+                    </button>
+                </div>
+           </div>
+       )}
+
     </div>
   );
 };

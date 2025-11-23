@@ -1,13 +1,15 @@
+
 import React, { useState } from 'react';
-import { ProductionRun, TravelerStep } from '../types';
+import { ProductionRun, TravelerStep, ComplianceMode } from '../types';
 import { TacticalCard, StatusBadge } from './Shared';
-import { Check, Circle, AlertTriangle, FileText, ArrowRight } from 'lucide-react';
+import { Check, Circle, AlertTriangle, FileText, ArrowRight, ShieldCheck } from 'lucide-react';
 
 interface TravelerViewProps {
   traveler: ProductionRun;
+  complianceMode: ComplianceMode;
 }
 
-export const TravelerView: React.FC<TravelerViewProps> = ({ traveler }) => {
+export const TravelerView: React.FC<TravelerViewProps> = ({ traveler, complianceMode }) => {
   const [steps, setSteps] = useState<TravelerStep[]>(traveler.steps);
   
   const toggleStep = (id: string) => {
@@ -44,6 +46,11 @@ export const TravelerView: React.FC<TravelerViewProps> = ({ traveler }) => {
                 <div className="text-right">
                      <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Trace ID</span>
                      <p className="font-mono text-sm text-gray-800 mt-1">8F-99-2A-11</p>
+                     
+                     <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-lg text-xs font-bold text-gray-600">
+                        <ShieldCheck size={12} />
+                        Enforcing: {complianceMode}
+                     </div>
                 </div>
             </div>
             

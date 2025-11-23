@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { TacticalCard, StatWidget } from './Shared';
 import { AlertCircle, CheckCircle2, Package, Zap, Sparkles, Bot, Plus } from 'lucide-react';
+import { ComplianceMode } from '../types';
 
 const DATA = [
   { name: 'M', value: 4000, compliance: 98 },
@@ -13,7 +15,11 @@ const DATA = [
   { name: 'S', value: 3490, compliance: 100 },
 ];
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+    complianceMode: ComplianceMode;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
   const [simulationInput, setSimulationInput] = useState('');
   const [simulationResult, setSimulationResult] = useState<string | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -29,6 +35,38 @@ export const Dashboard: React.FC = () => {
         setSimulationResult("If we switch vendor V-101 to on-hold status, the lead time impact on PO-2024-001 is estimated at +14 days. Confidence: High.");
     }, 1500);
   };
+
+  const getComplianceItems = () => {
+      switch(complianceMode) {
+          case ComplianceMode.PHARMA_US:
+              return [
+                  { label: '21 CFR Part 11 Audit', status: 'Secure', time: '09:00' },
+                  { label: 'Batch Record Review', status: 'Pending', time: '11:15' },
+                  { label: 'Instrument Calibration', status: 'Valid', time: 'Now' },
+              ];
+          case ComplianceMode.PHARMA_EU:
+              return [
+                  { label: 'Annex 11 Review', status: 'Secure', time: '08:30' },
+                  { label: 'Cleanroom Env Log', status: 'Valid', time: '10:00' },
+                  { label: 'QP Release Status', status: 'Pending', time: 'Now' },
+              ];
+          case ComplianceMode.GCAP:
+               return [
+                  { label: 'Global Audit Protocol', status: 'Secure', time: '07:00' },
+                  { label: 'Export Control Status', status: 'Valid', time: '12:00' },
+                  { label: 'Sustainability Metric', status: 'Valid', time: 'Now' },
+              ];
+          case ComplianceMode.DEFENCE:
+          default:
+              return [
+                { label: 'ITAR Control', status: 'Secure', time: '08:00' },
+                { label: 'CMMC Audit', status: 'Pending', time: '14:30' },
+                { label: 'Material Certs', status: 'Valid', time: 'Now' },
+              ];
+      }
+  };
+
+  const complianceItems = getComplianceItems();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-8 h-full overflow-y-auto">
@@ -117,13 +155,9 @@ export const Dashboard: React.FC = () => {
       </TacticalCard>
 
       {/* Side Feed */}
-      <TacticalCard title="Compliance" className="md:col-span-1 h-96">
+      <TacticalCard title={`Compliance (${complianceMode})`} className="md:col-span-1 h-96">
         <div className="space-y-6 mt-2">
-            {[
-                { label: 'ITAR Control', status: 'Secure', time: '08:00' },
-                { label: 'CMMC Audit', status: 'Pending', time: '14:30' },
-                { label: 'Material Certs', status: 'Valid', time: 'Now' },
-            ].map((item, idx) => (
+            {complianceItems.map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors">
                     <div>
                         <p className="font-medium text-sm text-gray-900">{item.label}</p>

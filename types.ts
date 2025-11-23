@@ -43,6 +43,13 @@ export enum UserRole {
   LOGISTICS_SPECIALIST = 'Logistics Specialist'
 }
 
+export enum ComplianceMode {
+  DEFENCE = 'DEFENCE',
+  PHARMA_US = 'PHARMA_US',
+  PHARMA_EU = 'PHARMA_EU',
+  GCAP = 'GCAP'
+}
+
 export interface InventoryItem {
   id: string;
   partNumber: string;
@@ -148,4 +155,16 @@ export interface ProductionSchedule {
   machineCenter: string;
   loadFactor: number; // 0-100 percentage
   status: 'Scheduled' | 'Delayed' | 'In Progress';
+}
+
+export interface CertificateOfConformance {
+    id: string;
+    salesOrderId: string;
+    partNumber: string;
+    quantityShipped: number;
+    finalInspectionStatus: 'Passed' | 'Failed';
+    digitalSignature: string; 
+    rawMaterialTrace: { item: string; lotNumber: string; vendorCage: string }[];
+    complianceStatement: string;
+    complianceMode: ComplianceMode;
 }

@@ -1,10 +1,15 @@
+
 import React, { useState } from 'react';
 import { INITIAL_INVOICES, INITIAL_VENDORS } from '../services/mockData';
 import { TacticalCard, StatWidget, StatusBadge } from './Shared';
 import { DollarSign, Clock, Lock, TrendingUp, Check, AlertTriangle } from 'lucide-react';
-import { Invoice, InvoiceStatus } from '../types';
+import { Invoice, InvoiceStatus, ComplianceMode } from '../types';
 
-export const FinanceView: React.FC = () => {
+interface FinanceViewProps {
+    complianceMode: ComplianceMode;
+}
+
+export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode }) => {
   const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
 
   // Actions
@@ -27,6 +32,16 @@ export const FinanceView: React.FC = () => {
     
   const overdueCount = invoices.filter(inv => inv.status === InvoiceStatus.OVERDUE).length;
 
+  const getAuditStatusText = () => {
+      switch(complianceMode) {
+          case ComplianceMode.PHARMA_US: return "21 CFR Part 11";
+          case ComplianceMode.PHARMA_EU: return "EU GMP Compliant";
+          case ComplianceMode.GCAP: return "Global Audit Pass";
+          case ComplianceMode.DEFENCE:
+          default: return "ITAR Secure";
+      }
+  };
+
   return (
     <div className="h-full flex flex-col bg-white p-8 gap-6 overflow-y-auto">
       
@@ -46,8 +61,8 @@ export const FinanceView: React.FC = () => {
             color={overdueCount > 0 ? 'orange' : 'default'}
         />
         <StatWidget 
-            title="ITAR Audit" 
-            value="Secure" 
+            title="Audit Status" 
+            value={getAuditStatusText()} 
             icon={Lock} 
             color="default"
         />

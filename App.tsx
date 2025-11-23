@@ -3,14 +3,19 @@ import {
   LayoutGrid, 
   Box, 
   Factory, 
-  Menu, 
   LogOut, 
-  Activity
+  Activity,
+  DollarSign,
+  ClipboardList,
+  Truck
 } from 'lucide-react';
 import { NavButton } from './components/Shared';
 import { Dashboard } from './components/Dashboard';
 import { InventoryView } from './components/InventoryView';
 import { TravelerView } from './components/TravelerView';
+import { ProcurementView } from './components/ProcurementView';
+import { FinanceView } from './components/FinanceView';
+import { OrdersView } from './components/OrdersView';
 import { Login } from './components/Login';
 import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_LOGS } from './services/mockData';
 
@@ -18,6 +23,9 @@ enum View {
   DASHBOARD,
   INVENTORY,
   MANUFACTURING,
+  PROCUREMENT,
+  FINANCE,
+  ORDERS,
   ADMIN
 }
 
@@ -58,7 +66,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Navigation "Keys" */}
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-2 overflow-y-auto no-scrollbar">
           <NavButton 
             icon={LayoutGrid} 
             label="Overview" 
@@ -80,10 +88,32 @@ const App: React.FC = () => {
             onClick={() => setCurrentView(View.MANUFACTURING)} 
             collapsed={sidebarCollapsed}
           />
+          <div className="h-px bg-gray-200 mx-4 my-2" />
+          <NavButton 
+            icon={ClipboardList} 
+            label="Procurement" 
+            active={currentView === View.PROCUREMENT} 
+            onClick={() => setCurrentView(View.PROCUREMENT)} 
+            collapsed={sidebarCollapsed}
+          />
+          <NavButton 
+            icon={Truck} 
+            label="Orders" 
+            active={currentView === View.ORDERS} 
+            onClick={() => setCurrentView(View.ORDERS)} 
+            collapsed={sidebarCollapsed}
+          />
+          <NavButton 
+            icon={DollarSign} 
+            label="Finance" 
+            active={currentView === View.FINANCE} 
+            onClick={() => setCurrentView(View.FINANCE)} 
+            collapsed={sidebarCollapsed}
+          />
         </nav>
 
         {/* User Profile "Key" */}
-        <div className="mt-auto">
+        <div className="mt-auto pt-4">
            {!sidebarCollapsed ? (
             <div className="bg-white rounded-2xl p-4 shadow-key border border-white/50 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-800">
@@ -116,6 +146,9 @@ const App: React.FC = () => {
                 {currentView === View.DASHBOARD && 'Mission Control'}
                 {currentView === View.INVENTORY && 'Materials & Assets'}
                 {currentView === View.MANUFACTURING && 'Assembly Line'}
+                {currentView === View.PROCUREMENT && 'P2P Control Grid'}
+                {currentView === View.FINANCE && 'Financial Command'}
+                {currentView === View.ORDERS && 'Global Order Dispatch'}
               </h2>
             </div>
             <div className="flex items-center gap-4">
@@ -131,6 +164,9 @@ const App: React.FC = () => {
              {currentView === View.DASHBOARD && <Dashboard />}
              {currentView === View.INVENTORY && <InventoryView items={INITIAL_INVENTORY} />}
              {currentView === View.MANUFACTURING && <TravelerView traveler={MOCK_TRAVELER} />}
+             {currentView === View.PROCUREMENT && <ProcurementView />}
+             {currentView === View.FINANCE && <FinanceView />}
+             {currentView === View.ORDERS && <OrdersView />}
           </div>
 
           {/* Live Audit Ticker (Bottom) */}

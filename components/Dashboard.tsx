@@ -1,7 +1,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { TacticalCard } from './Shared';
-import { ArrowUpRight, AlertCircle, CheckCircle2, Package } from 'lucide-react';
+import { TacticalCard, StatWidget } from './Shared';
+import { AlertCircle, CheckCircle2, Package } from 'lucide-react';
 
 const DATA = [
   { name: 'M', value: 4000, compliance: 98 },
@@ -12,29 +12,6 @@ const DATA = [
   { name: 'S', value: 2390, compliance: 100 },
   { name: 'S', value: 3490, compliance: 100 },
 ];
-
-// Helper component for those big beautiful numbers
-const StatWidget = ({ title, value, unit, trend, icon: Icon, color }: any) => (
-  <TacticalCard className="h-full justify-between group hover:shadow-md transition-shadow duration-500">
-    <div className="flex justify-between items-start">
-      <div className={`p-3 rounded-2xl ${color === 'blue' ? 'bg-blue-50 text-blue-600' : color === 'orange' ? 'bg-orange-50 text-orange-600' : 'bg-gray-50 text-gray-900'}`}>
-        <Icon size={24} strokeWidth={1.5} />
-      </div>
-      {trend && (
-        <div className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-          <ArrowUpRight size={12} /> {trend}
-        </div>
-      )}
-    </div>
-    <div>
-      <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-      <div className="flex items-baseline gap-1">
-        <h2 className="text-4xl font-display font-bold text-gray-900 tracking-tight">{value}</h2>
-        {unit && <span className="text-sm font-medium text-gray-400">{unit}</span>}
-      </div>
-    </div>
-  </TacticalCard>
-);
 
 export const Dashboard: React.FC = () => {
   return (

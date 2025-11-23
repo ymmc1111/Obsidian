@@ -1,10 +1,10 @@
 
-
 import React, { useState } from 'react';
 import { INITIAL_INVOICES, INITIAL_VENDORS, INITIAL_FINANCIAL_KPIS } from '../services/mockData';
 import { TacticalCard, StatWidget, StatusBadge } from './Shared';
 import { DollarSign, Clock, Lock, TrendingUp, Check, AlertTriangle, ArrowUpRight, ArrowDownRight, PieChart, Scale } from 'lucide-react';
 import { Invoice, InvoiceStatus, ComplianceMode } from '../types';
+import { telemetryService } from '../services/telemetryService';
 
 interface FinanceViewProps {
     complianceMode: ComplianceMode;
@@ -15,6 +15,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode }) => {
 
   // Actions
   const approveInvoice = (id: string) => {
+    // Record KPI: AP Approval
+    telemetryService.incrementCounter('ap_approval_count', { invoice_id: id });
+    
     setInvoices(prev => prev.map(inv => 
       inv.id === id ? { ...inv, status: InvoiceStatus.APPROVED } : inv
     ));

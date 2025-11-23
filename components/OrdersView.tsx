@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import { INITIAL_ORDERS, generateCoC } from '../services/mockData';
 import { TacticalCard, StatusBadge } from './Shared';
 import { Globe, Truck, RotateCcw, Box, RefreshCcw, FileCheck, CheckCircle2 } from 'lucide-react';
 import { SalesOrder, CertificateOfConformance, ComplianceMode } from '../types';
+import { telemetryService } from '../services/telemetryService';
 
 interface OrdersViewProps {
     complianceMode: ComplianceMode;
@@ -26,10 +28,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
   };
 
   const handleGenerateCoC = () => {
+      // Start Trace
+      const span = telemetryService.startSpan('coc_generation_process');
+      
       if (orders.length > 0) {
           const coc = generateCoC(orders[0].id, complianceMode);
           setGeneratedCoC(coc);
       }
+      
+      // End Trace (simulating completion immediately as mock func is sync)
+      telemetryService.endSpan(span);
   };
 
   return (

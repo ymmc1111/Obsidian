@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutGrid, 
@@ -29,8 +30,10 @@ import { LogisticsView } from './components/LogisticsView';
 import { TraceView } from './components/TraceView';
 import { ShopFloorView } from './components/ShopFloorView';
 import { Login } from './components/Login';
-import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_LOGS } from './services/mockData';
-import { ComplianceMode, UserRole } from './types';
+import { INITIAL_INVENTORY, MOCK_TRAVELER } from './services/mockData';
+import { auditService } from './services/auditService';
+import { telemetryService } from './services/telemetryService';
+import { ComplianceMode, UserRole, AuditLogEntry } from './types';
 
 enum View {
   DASHBOARD,
@@ -52,14 +55,38 @@ const App: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeComplianceMode, setActiveComplianceMode] = useState<ComplianceMode>(ComplianceMode.DEFENCE);
+  const [systemLogs, setSystemLogs] = useState<AuditLogEntry[]>([]);
   
   // Demo State: Mock User Role for Shop Floor Security
   const [currentUserRole, setCurrentUserRole] = useState<UserRole>(UserRole.PRODUCTION_OPERATOR);
+
+  // Subscribe to Audit Service
+  useEffect(() => {
+    const unsubscribe = auditService.subscribe((logs) => {
+      setSystemLogs([...logs]); // Create copy to trigger re-render
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Close mobile menu when view changes
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [currentView]);
+
+  // Telemetry for Navigation
+  const handleViewChange = (view: View) => {
+    const viewName = View[view];
+    const span = telemetryService.startSpan('user_navigation', { target_view: viewName });
+    setCurrentView(view);
+    telemetryService.endSpan(span);
+  };
+
+  // Telemetry for Login
+  const handleLogin = () => {
+    const span = telemetryService.startSpan('user_authentication');
+    setIsAuthenticated(true);
+    telemetryService.endSpan(span);
+  };
 
   // Demo: Cycle roles on profile click
   const cycleRole = () => {
@@ -76,7 +103,7 @@ const App: React.FC = () => {
   };
 
   if (!isAuthenticated) {
-    return <Login onLogin={() => setIsAuthenticated(true)} />;
+    return <Login onLogin={handleLogin} />;
   }
 
   return (
@@ -146,35 +173,35 @@ const App: React.FC = () => {
             icon={Tractor} 
             label="Shop Floor Mode" 
             active={currentView === View.SHOP_FLOOR} 
-            onClick={() => setCurrentView(View.SHOP_FLOOR)} 
+            onClick={() => handleViewChange(View.SHOP_FLOOR)} 
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
           <NavButton 
             icon={LayoutGrid} 
             label="Overview" 
             active={currentView === View.DASHBOARD} 
-            onClick={() => setCurrentView(View.DASHBOARD)} 
+            onClick={() => handleViewChange(View.DASHBOARD)} 
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
           <NavButton 
             icon={Box} 
             label="Inventory" 
             active={currentView === View.INVENTORY} 
-            onClick={() => setCurrentView(View.INVENTORY)} 
+            onClick={() => handleViewChange(View.INVENTORY)} 
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
           <NavButton 
             icon={Target} 
             label="Traceability" 
             active={currentView === View.TRACEABILITY} 
-            onClick={() => setCurrentView(View.TRACEABILITY)} 
+            onClick={() => handleViewChange(View.TRACEABILITY)} 
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
           <NavButton 
             icon={Factory} 
             label="Production" 
             active={currentView === View.MANUFACTURING} 
-            onClick={() => setCurrentView(View.MANUFACTURING)} 
+            onClick={() => handleViewChange(View.MANUFACTURING)} 
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
           <div className="h-px bg-gray-200 mx-4 my-2" />
@@ -182,35 +209,35 @@ const App: React.FC = () => {
             icon={ClipboardList} 
             label="Procurement" 
             active={currentView === View.PROCUREMENT} 
-            onClick={() => setCurrentView(View.PROCUREMENT)} 
+            onClick={() => handleViewChange(View.PROCUREMENT)} 
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
           <NavButton 
             icon={Truck} 
             label="Orders" 
             active={currentView === View.ORDERS} 
-            onClick={() => setCurrentView(View.ORDERS)} 
+            onClick={() => handleViewChange(View.ORDERS)} 
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
           <NavButton 
             icon={DollarSign} 
             label="Finance" 
             active={currentView === View.FINANCE} 
-            onClick={() => setCurrentView(View.FINANCE)} 
+            onClick={() => handleViewChange(View.FINANCE)} 
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
           <NavButton 
             icon={CalendarCheck} 
             label="Production Planning" 
             active={currentView === View.PLANNING} 
-            onClick={() => setCurrentView(View.PLANNING)} 
+            onClick={() => handleViewChange(View.PLANNING)} 
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
            <NavButton 
             icon={Map} 
             label="Logistics & Facilities" 
             active={currentView === View.LOGISTICS} 
-            onClick={() => setCurrentView(View.LOGISTICS)} 
+            onClick={() => handleViewChange(View.LOGISTICS)} 
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
           <div className="h-px bg-gray-200 mx-4 my-2" />
@@ -218,7 +245,7 @@ const App: React.FC = () => {
             icon={Users} 
             label="Admin" 
             active={currentView === View.ADMIN} 
-            onClick={() => setCurrentView(View.ADMIN)} 
+            onClick={() => handleViewChange(View.ADMIN)} 
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
         </nav>
@@ -308,7 +335,7 @@ const App: React.FC = () => {
               <Activity size={12} /> <span className="hidden sm:inline">System Logs</span>
             </div>
             <div className="flex items-center gap-4 md:gap-8 overflow-hidden marquee-mask">
-              {INITIAL_LOGS.map((log, i) => (
+              {systemLogs.map((log, i) => (
                  <div key={i} className="flex items-center gap-2 text-[10px] md:text-xs font-mono text-gray-500 whitespace-nowrap opacity-60">
                     <span className="text-gray-300">|</span>
                     <span>{log.timestamp.split('T')[1].substring(0,5)}</span>

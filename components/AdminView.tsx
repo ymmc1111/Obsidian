@@ -4,6 +4,7 @@ import { StatusBadge, TacticalCard } from './Shared';
 import { Users, Shield, Plus, Lock, CheckCircle2, X, Globe, Microscope, Building2, FileCheck } from 'lucide-react';
 import { SystemUser, UserRole, ComplianceMode } from '../types';
 import { INITIAL_VALIDATIONS } from '../services/mockData';
+import { auditService } from '../services/auditService';
 
 interface AdminViewProps {
   activeMode: ComplianceMode;
@@ -20,6 +21,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeMode, setMode }) => 
       setUsers(prev => prev.map(u => 
         u.id === editingUser.id ? { ...u, role: role as UserRole } : u
       ));
+      
+      auditService.logAction(
+        'J. Doe (U-001)', 
+        'USER_ROLE_MODIFIED', 
+        `Changed role for user ${editingUser.id} (${editingUser.name}) to ${role}.`
+      );
+
       setEditingUser({ ...editingUser, role: role as UserRole });
     }
   };

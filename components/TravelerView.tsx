@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import { ProductionRun, TravelerStep, ComplianceMode } from '../types';
 import { TacticalCard, StatusBadge } from './Shared';
 import { Check, Circle, AlertTriangle, FileText, ArrowRight, ShieldCheck, ClipboardCheck } from 'lucide-react';
-import { INITIAL_CAPAS } from '../services/mockData';
+import { auditService } from '../services/auditService';
+import { telemetryService } from '../services/telemetryService';
 
 interface TravelerViewProps {
   traveler: ProductionRun;
@@ -14,23 +16,47 @@ export const TravelerView: React.FC<TravelerViewProps> = ({ traveler, compliance
   const [activeCapa, setActiveCapa] = useState<string | null>(null);
   
   const toggleStep = (id: string) => {
+    const span = telemetryService.startSpan('traveler_step_completion', { traveler_id: traveler.id, step_id: id });
+    
     setSteps(prev => prev.map(step => {
-        if (step.id === id) {
+        if (step.id === id && !step.completed) {
+            // Log the action immediately when completing a step
+            auditService.logAction(
+                'J. Doe (U-001)', 
+                'TRAVELER_STEP_COMPLETE', 
+                `Verified step ${id} on traveler ${traveler.id}. Role: ${step.requiredRole}`
+            );
+            
+            // Record business process velocity (Mock: simulate time spent on step)
+            // In reality, this would be computed from a persisted 'start_time'
+            const mockTimeSpent = Math.floor(Math.random() * 30) + 10; // 10-40 mins
+            telemetryService.recordMetric('traveler_step_velocity_mins', mockTimeSpent, { role: step.requiredRole });
+
             return { 
                 ...step, 
-                completed: !step.completed, 
-                completedBy: !step.completed ? 'J. Doe' : undefined,
-                timestamp: !step.completed ? new Date().toISOString() : undefined
+                completed: true, 
+                completedBy: 'J. Doe',
+                timestamp: new Date().toISOString()
             };
         }
         return step;
     }));
+
+    telemetryService.endSpan(span);
   };
 
   const handleReportIssue = () => {
       // Simulate creating a CAPA
-      setActiveCapa("CAPA-102");
-      alert("Deviation logged (CAPA-102). Workflow frozen for investigation.");
+      const capaId = "CAPA-102";
+      setActiveCapa(capaId);
+      
+      auditService.logAction(
+        'J. Doe (U-001)', 
+        'CAPA_INITIATED', 
+        `Deviation logged for traveler ${traveler.id}. CAPA ID: ${capaId}`
+      );
+
+      alert(`Deviation logged (${capaId}). Workflow frozen for investigation.`);
   };
 
   // Calculate progress

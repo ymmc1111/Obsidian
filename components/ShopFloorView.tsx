@@ -1,7 +1,10 @@
+
 import React, { useState } from 'react';
 import { ProductionRun, UserRole, TravelerStep } from '../types';
 import { Check, AlertTriangle, Search, ArrowRight, ShieldCheck, Fingerprint, Box } from 'lucide-react';
 import { TacticalCard } from './Shared';
+import { auditService } from '../services/auditService';
+import { telemetryService } from '../services/telemetryService';
 
 interface ShopFloorViewProps {
   userRole: UserRole;
@@ -15,6 +18,15 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
 
   const handleVerifySign = () => {
     setIsSigning(true);
+    const span = telemetryService.startSpan('shop_floor_step_completion', { role: userRole });
+    
+    // Log the verification
+    auditService.logAction(
+        `${userRole} (Term-800)`, 
+        'TRAVELER_STEP_COMPLETE', 
+        `Step ${currentStep.id} verified from Shop Floor Terminal.`
+    );
+
     setTimeout(() => {
         setIsSigning(false);
         // Advance step mock
@@ -23,10 +35,17 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
         } else {
             alert("Job Complete. Traveler closed.");
         }
+        telemetryService.endSpan(span);
     }, 1500);
   };
 
   const handleReportDeviation = () => {
+      const capaId = "CAPA-SF-991";
+      auditService.logAction(
+        `${userRole} (Term-800)`, 
+        'CAPA_INITIATED', 
+        `Deviation reported from Shop Floor. ID: ${capaId}`
+      );
       alert("CAPA Workflow Initiated. QA Protocol Active.");
   };
 

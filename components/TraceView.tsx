@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TacticalCard, StatusBadge } from './Shared';
 import { Search, Package, Factory, CheckCircle2, Truck, AlertTriangle, Target, ArrowRight } from 'lucide-react';
 import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_ORDERS } from '../services/mockData';
+import { auditService } from '../services/auditService';
 
 export const TraceView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('SN-2024-9901');
@@ -15,6 +16,14 @@ export const TraceView: React.FC = () => {
 
   const handleRecall = () => {
     setIsRecalling(true);
+    
+    // Log the recall action
+    auditService.logAction(
+        'J. Doe (U-001)', 
+        'RECALL_INITIATED', 
+        'Batch LOT-99812A (450 Units) set to QUARANTINE status.'
+    );
+
     setTimeout(() => {
         setIsRecalling(false);
         alert("Recall Initiated: 450 units of lot LOT-99812A have been flagged and placed on quarantine status across all warehouses.");

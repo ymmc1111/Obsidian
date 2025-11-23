@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import { InventoryItem } from '../types';
 import { StatusBadge } from './Shared';
 import { Search, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { askTacticalAssistant } from '../services/geminiService';
+import { telemetryService } from '../services/telemetryService';
 
 interface InventoryViewProps {
   items: InventoryItem[];
@@ -21,11 +23,22 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
   const handleAIAnalyze = async () => {
     setIsAnalyzing(true);
     setAiAnalysis(null);
-    const context = JSON.stringify(items);
-    const prompt = "Analyze the current inventory levels. Identify any Dead Stock candidates (items with old batch lots) or potential shortages based on typical defense usage rates.";
-    const result = await askTacticalAssistant(context, prompt);
-    setAiAnalysis(result);
-    setIsAnalyzing(false);
+    
+    // Start distributed trace span
+    const span = telemetryService.startSpan('ai_decision_support', { context: 'inventory_audit' });
+
+    try {
+        const context = JSON.stringify(items);
+        const prompt = "Analyze the current inventory levels. Identify any Dead Stock candidates (items with old batch lots) or potential shortages based on typical defense usage rates.";
+        const result = await askTacticalAssistant(context, prompt);
+        setAiAnalysis(result);
+        telemetryService.endSpan(span, 'ok');
+    } catch (error) {
+        telemetryService.endSpan(span, 'error', error);
+        setAiAnalysis("Analysis failed due to system error.");
+    } finally {
+        setIsAnalyzing(false);
+    }
   };
 
   return (

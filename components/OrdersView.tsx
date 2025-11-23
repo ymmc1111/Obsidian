@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { INITIAL_ORDERS, generateCoC } from '../services/mockData';
 import { TacticalCard, StatusBadge } from './Shared';
@@ -34,15 +33,15 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white p-8 gap-6 overflow-y-auto relative">
+    <div className="h-full flex flex-col bg-white p-4 md:p-8 gap-4 md:gap-6 overflow-y-auto relative">
       
       {/* Top Logic Engines */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         
         <TacticalCard title="Fulfillment Logic Engine">
            <div className="mt-2 space-y-4">
               <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex gap-4 items-center">
-                 <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
+                 <div className="p-2 bg-blue-100 text-blue-600 rounded-xl shrink-0">
                     <Globe size={20} />
                  </div>
                  <div className="flex-1">
@@ -51,7 +50,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
                        If Customer is <span className="font-bold">DoD/Space</span>, Route to: <span className="font-bold">US-East WH (ITAR Compliant)</span>
                     </p>
                  </div>
-                 <div className="text-right">
+                 <div className="text-right shrink-0">
                     <StatusBadge status="Active" />
                     <p className="text-[10px] text-gray-400 mt-1">Run: 4m ago</p>
                  </div>
@@ -60,7 +59,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
         </TacticalCard>
 
         <TacticalCard title="Returns (RMA) Tracking">
-           <div className="flex gap-4 mt-2">
+           <div className="flex flex-col sm:flex-row gap-4 mt-2">
               <div className="flex-1 p-4 bg-orange-50 rounded-2xl flex flex-col justify-between">
                  <div className="flex items-center gap-2 text-orange-600 mb-2">
                     <Truck size={18} />
@@ -85,20 +84,20 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
       </div>
 
       {/* Orders Table */}
-      <div className="flex-1 bg-white rounded-3xl shadow-soft border border-gray-100 p-6 overflow-hidden flex flex-col">
-         <div className="flex justify-between items-center mb-6">
+      <div className="flex-1 bg-white rounded-3xl shadow-soft border border-gray-100 p-4 md:p-6 overflow-hidden flex flex-col">
+         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <h3 className="font-display text-lg font-semibold tracking-tight text-gray-900">Global Sales Orders</h3>
             <button 
                 onClick={handleGenerateCoC}
-                className="flex items-center gap-2 text-sm font-bold bg-black text-white px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors shadow-key"
+                className="flex items-center gap-2 text-sm font-bold bg-black text-white px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors shadow-key w-full sm:w-auto justify-center"
             >
                 <FileCheck size={16} />
                 Generate CoC
             </button>
          </div>
          
-         <div className="overflow-auto">
-            <table className="w-full text-left border-collapse">
+         <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[900px]">
                <thead>
                   <tr>
                      <th className="pb-4 pl-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Order ID</th>
@@ -150,7 +149,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
 
        {/* CoC Modal / Notification */}
        {generatedCoC && (
-           <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/60 backdrop-blur-sm">
+           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/60 backdrop-blur-sm">
                 <div className="bg-white rounded-[2rem] shadow-2xl p-8 border border-gray-100 max-w-md w-full animate-in fade-in zoom-in-95 duration-300">
                     <div className="flex items-center justify-center mb-6 text-green-500">
                         <CheckCircle2 size={48} />

@@ -3,9 +3,9 @@ import { LucideIcon, ArrowUpRight } from 'lucide-react';
 
 // The "Surface" is the Jony Ive-esque card. Clean, white, rounded, soft shadow.
 export const TacticalCard = ({ children, className = '', title, action }: { children?: React.ReactNode, className?: string, title?: string, action?: React.ReactNode }) => (
-  <div className={`bg-white rounded-3xl shadow-soft p-6 flex flex-col border border-white/50 ${className}`}>
+  <div className={`bg-white rounded-3xl shadow-soft p-4 md:p-6 flex flex-col border border-white/50 ${className}`}>
     {(title || action) && (
-      <div className="flex justify-between items-end mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-4 md:mb-6 gap-2 sm:gap-0">
         {title && (
           <h3 className="font-display text-lg font-semibold tracking-tight text-ios-text">
             {title}
@@ -24,22 +24,22 @@ export const StatusBadge = ({ status }: { status: string }) => {
   let colorClass = 'bg-gray-100 text-gray-600';
   
   // Success / Good / Safe
-  if (['AVAILABLE', 'COMPLETED', 'PASSED', 'SAFE', 'Active', 'FILLED', 'PAID', 'APPROVED', 'SHIPPED', 'DELIVERED', 'Complete'].includes(status)) {
+  if (['AVAILABLE', 'COMPLETED', 'PASSED', 'SAFE', 'Active', 'FILLED', 'PAID', 'APPROVED', 'SHIPPED', 'DELIVERED', 'Complete', 'Valid', 'Calibrated', 'Scheduled', 'Nominal', 'Closed'].includes(status)) {
     colorClass = 'bg-[#34C759]/10 text-[#34C759]';
   }
   
   // Warning / Pending / Processing
-  if (['ALLOCATED', 'IN_PROGRESS', 'CUI', 'SENT', 'PARTIAL', 'PENDING', 'PROCESSING', 'NEW', 'Pending'].includes(status)) {
+  if (['ALLOCATED', 'IN_PROGRESS', 'CUI', 'SENT', 'PARTIAL', 'PENDING', 'PROCESSING', 'NEW', 'Pending', 'Scheduled', 'Warning', 'Investigation'].includes(status)) {
     colorClass = 'bg-orange-100 text-orange-600';
   }
   
   // Danger / Error / Stop
-  if (['QUARANTINE', 'SCRAP', 'FAILED', 'HALTED', 'SECRET', 'OVERDUE', 'BACKORDERED', 'Mismatched', 'On Hold', 'CLOSED'].includes(status)) {
+  if (['QUARANTINE', 'SCRAP', 'FAILED', 'HALTED', 'SECRET', 'OVERDUE', 'BACKORDERED', 'Mismatched', 'On Hold', 'CLOSED', 'Expired', 'Overdue', 'Restricted', 'Delayed', 'Open'].includes(status)) {
     colorClass = 'bg-red-100 text-red-600';
   }
 
   return (
-    <span className={`px-3 py-1 rounded-full text-[10px] font-semibold tracking-wide ${colorClass} uppercase`}>
+    <span className={`px-2.5 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] font-semibold tracking-wide ${colorClass} uppercase whitespace-nowrap`}>
       {status}
     </span>
   );
@@ -98,10 +98,10 @@ export const StatWidget = ({ title, value, unit, trend, icon: Icon, color }: any
         </div>
       )}
     </div>
-    <div>
+    <div className="mt-4">
       <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-      <div className="flex items-baseline gap-1">
-        <h2 className="text-4xl font-display font-bold text-gray-900 tracking-tight">{value}</h2>
+      <div className="flex items-baseline gap-1 flex-wrap">
+        <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 tracking-tight">{value}</h2>
         {unit && <span className="text-sm font-medium text-gray-400">{unit}</span>}
       </div>
     </div>

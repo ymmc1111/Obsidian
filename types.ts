@@ -1,4 +1,5 @@
 
+
 export enum SensitivityLevel {
   UNCLASSIFIED = 'UNCLASSIFIED',
   CUI = 'CUI', // Controlled Unclassified Information
@@ -167,4 +168,34 @@ export interface CertificateOfConformance {
     rawMaterialTrace: { item: string; lotNumber: string; vendorCage: string }[];
     complianceStatement: string;
     complianceMode: ComplianceMode;
+}
+
+export interface Capa {
+  id: string;
+  description: string;
+  status: 'Open' | 'Investigation' | 'Closed';
+}
+
+export interface ValidationDoc {
+  id: string;
+  name: string;
+  type: string;
+  status: 'Valid' | 'Review Needed' | 'Expired';
+  nextReviewDate: string;
+}
+
+export interface CalibrationItem {
+  id: string;
+  instrumentId: string;
+  nextCalibration: string;
+  status: 'Valid' | 'Expiring Soon' | 'Expired';
+}
+
+export interface EnvironmentalLog {
+  id: string;
+  location: string;
+  metric: 'Temp' | 'Humidity' | 'Pressure';
+  value: string;
+  timestamp: string;
+  alertLevel: 'Nominal' | 'Warning' | 'Critical';
 }

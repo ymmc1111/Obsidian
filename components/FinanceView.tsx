@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { INITIAL_INVOICES, INITIAL_VENDORS } from '../services/mockData';
 import { TacticalCard, StatWidget, StatusBadge } from './Shared';
@@ -43,32 +42,38 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode }) => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white p-8 gap-6 overflow-y-auto">
+    <div className="h-full flex flex-col bg-white p-4 md:p-8 gap-4 md:gap-6 overflow-y-auto">
       
       {/* KPI Widgets */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-40">
-        <StatWidget 
-            title="Total AP" 
-            value={`$${(totalAP / 1000).toFixed(1)}k`} 
-            icon={DollarSign} 
-            color="blue"
-        />
-        <StatWidget 
-            title="Overdue Invoices" 
-            value={overdueCount} 
-            unit="Docs"
-            icon={Clock} 
-            color={overdueCount > 0 ? 'orange' : 'default'}
-        />
-        <StatWidget 
-            title="Audit Status" 
-            value={getAuditStatusText()} 
-            icon={Lock} 
-            color="default"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+        <div className="h-auto md:h-40">
+            <StatWidget 
+                title="Total AP" 
+                value={`$${(totalAP / 1000).toFixed(1)}k`} 
+                icon={DollarSign} 
+                color="blue"
+            />
+        </div>
+        <div className="h-auto md:h-40">
+            <StatWidget 
+                title="Overdue Invoices" 
+                value={overdueCount} 
+                unit="Docs"
+                icon={Clock} 
+                color={overdueCount > 0 ? 'orange' : 'default'}
+            />
+        </div>
+        <div className="h-auto md:h-40">
+            <StatWidget 
+                title="Audit Status" 
+                value={getAuditStatusText()} 
+                icon={Lock} 
+                color="default"
+            />
+        </div>
          {/* COG Valuation Card */}
-        <TacticalCard title="COG Valuation" className="bg-black text-white border-none">
-            <div className="flex flex-col justify-between h-full mt-1">
+        <TacticalCard title="COG Valuation" className="bg-black text-white border-none h-auto md:h-40">
+            <div className="flex flex-col justify-between h-full mt-1 gap-2">
                 <div>
                     <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Current Method</p>
                     <p className="text-lg font-bold text-white flex items-center gap-2">
@@ -82,7 +87,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode }) => {
       </div>
 
       {/* Invoice Ledger */}
-      <div className="flex-1 bg-white rounded-3xl shadow-soft border border-gray-100 p-6 overflow-hidden flex flex-col">
+      <div className="flex-1 bg-white rounded-3xl shadow-soft border border-gray-100 p-4 md:p-6 overflow-hidden flex flex-col">
          <div className="flex justify-between items-center mb-6">
             <h3 className="font-display text-lg font-semibold tracking-tight text-gray-900">Auditable AP Ledger</h3>
             <div className="flex gap-2">
@@ -91,8 +96,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode }) => {
             </div>
          </div>
          
-         <div className="overflow-auto">
-            <table className="w-full text-left border-collapse">
+         <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[800px]">
                <thead>
                   <tr>
                      <th className="pb-4 pl-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Invoice ID</th>

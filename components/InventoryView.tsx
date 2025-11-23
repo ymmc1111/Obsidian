@@ -31,7 +31,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
   return (
     <div className="h-full flex flex-col bg-white">
       {/* Toolbar */}
-      <div className="px-8 py-6 flex flex-col md:flex-row gap-4 items-center justify-between shrink-0 border-b border-gray-50">
+      <div className="px-4 py-4 md:px-8 md:py-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between shrink-0 border-b border-gray-50">
         <div className="relative w-full md:w-96 group">
             <Search className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-gray-800 transition-colors" size={20} />
             <input 
@@ -60,7 +60,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
 
       {/* AI Output Area */}
       {aiAnalysis && (
-        <div className="mx-8 mt-4 p-6 bg-gray-50 rounded-3xl border border-gray-100 animate-in fade-in slide-in-from-top-2">
+        <div className="mx-4 md:mx-8 mt-4 p-4 md:p-6 bg-gray-50 rounded-3xl border border-gray-100 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center gap-3 mb-3">
                 <div className="p-1.5 bg-black rounded-lg">
                     <Sparkles size={14} className="text-white" />
@@ -74,39 +74,41 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items }) => {
       )}
 
       {/* Data Grid */}
-      <div className="flex-1 overflow-auto p-8">
-        <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 z-10 bg-white">
-                <tr>
-                    <th className="pb-4 pl-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Part Details</th>
-                    <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Traceability</th>
-                    <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Quantity</th>
-                    <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Location</th>
-                    <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Status</th>
-                    <th className="pb-4 pr-4 text-right font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Cost</th>
-                </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-                {filteredItems.map(item => (
-                    <tr key={item.id} className="group hover:bg-gray-50/80 transition-colors rounded-xl">
-                        <td className="py-5 pl-4">
-                            <div className="font-bold text-gray-900 text-sm">{item.partNumber}</div>
-                            <div className="text-xs text-gray-500 mt-0.5">{item.nomenclature}</div>
-                        </td>
-                        <td className="py-5">
-                            <div className="flex flex-col gap-1">
-                                <span className="text-xs font-mono text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded w-fit">S/N: {item.serialNumber}</span>
-                                <span className="text-[10px] text-gray-400">CAGE: {item.cageCode}</span>
-                            </div>
-                        </td>
-                        <td className="py-5 font-display font-medium text-gray-900">{item.quantity}</td>
-                        <td className="py-5 text-sm text-gray-500">{item.location}</td>
-                        <td className="py-5"><StatusBadge status={item.status} /></td>
-                        <td className="py-5 pr-4 text-right font-mono text-sm text-gray-600">${item.unitCost.toFixed(2)}</td>
+      <div className="flex-1 overflow-auto p-4 md:p-8">
+        <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead className="sticky top-0 z-10 bg-white">
+                    <tr>
+                        <th className="pb-4 pl-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Part Details</th>
+                        <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Traceability</th>
+                        <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Quantity</th>
+                        <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Location</th>
+                        <th className="pb-4 font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Status</th>
+                        <th className="pb-4 pr-4 text-right font-display font-semibold text-xs text-gray-400 uppercase tracking-wider">Cost</th>
                     </tr>
-                ))}
-            </tbody>
-        </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                    {filteredItems.map(item => (
+                        <tr key={item.id} className="group hover:bg-gray-50/80 transition-colors rounded-xl">
+                            <td className="py-5 pl-4">
+                                <div className="font-bold text-gray-900 text-sm">{item.partNumber}</div>
+                                <div className="text-xs text-gray-500 mt-0.5">{item.nomenclature}</div>
+                            </td>
+                            <td className="py-5">
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-xs font-mono text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded w-fit">S/N: {item.serialNumber}</span>
+                                    <span className="text-[10px] text-gray-400">CAGE: {item.cageCode}</span>
+                                </div>
+                            </td>
+                            <td className="py-5 font-display font-medium text-gray-900">{item.quantity}</td>
+                            <td className="py-5 text-sm text-gray-500">{item.location}</td>
+                            <td className="py-5"><StatusBadge status={item.status} /></td>
+                            <td className="py-5 pr-4 text-right font-mono text-sm text-gray-600">${item.unitCost.toFixed(2)}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
       </div>
     </div>
   );

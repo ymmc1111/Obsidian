@@ -36,10 +36,10 @@ export const ProcurementView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white p-8 gap-6 overflow-y-auto">
+    <div className="h-full flex flex-col bg-white p-4 md:p-8 gap-4 md:gap-6 overflow-y-auto">
       
       {/* Top Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         <TacticalCard title="Vendor Gateway Access" className="md:col-span-1 bg-gray-900 text-white border-none">
           <div className="flex flex-col justify-between h-full">
              <div className="flex items-start gap-4 mt-2">
@@ -64,7 +64,7 @@ export const ProcurementView: React.FC = () => {
         </TacticalCard>
 
         <TacticalCard title="3-Way Match Velocity" className="md:col-span-2">
-           <div className="flex items-end justify-between h-full pb-2">
+           <div className="flex flex-col sm:flex-row sm:items-end justify-between h-full pb-2 gap-4">
               <div className="flex gap-8">
                  <div>
                     <p className="text-sm text-gray-400 mb-1">Auto-Matched</p>
@@ -75,7 +75,7 @@ export const ProcurementView: React.FC = () => {
                     <p className="text-3xl font-display font-bold text-gray-900">12</p>
                  </div>
               </div>
-              <button className="flex items-center gap-2 text-sm font-bold text-black bg-gray-100 px-4 py-2 rounded-xl hover:bg-gray-200 transition-colors">
+              <button className="flex items-center justify-center gap-2 text-sm font-bold text-black bg-gray-100 px-4 py-2 rounded-xl hover:bg-gray-200 transition-colors w-full sm:w-auto">
                  Review Exceptions <ArrowRight size={16} />
               </button>
            </div>
@@ -83,12 +83,12 @@ export const ProcurementView: React.FC = () => {
       </div>
 
       {/* Vendor Management Table */}
-      <div className="bg-white rounded-3xl shadow-soft border border-gray-100 p-6 overflow-hidden flex flex-col">
+      <div className="bg-white rounded-3xl shadow-soft border border-gray-100 p-4 md:p-6 overflow-hidden flex flex-col">
         <div className="flex justify-between items-center mb-6">
            <h3 className="font-display text-lg font-semibold tracking-tight text-gray-900">Vendor Compliance Grid</h3>
         </div>
-        <div className="overflow-auto">
-           <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto">
+           <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                  <tr>
                     <th className="pb-4 pl-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Vendor Name</th>
@@ -125,13 +125,13 @@ export const ProcurementView: React.FC = () => {
       </div>
 
       {/* PO Table */}
-      <div className="flex-1 bg-white rounded-3xl shadow-soft border border-gray-100 p-6 overflow-hidden flex flex-col">
+      <div className="flex-1 bg-white rounded-3xl shadow-soft border border-gray-100 p-4 md:p-6 overflow-hidden flex flex-col">
          <div className="flex justify-between items-center mb-6">
             <h3 className="font-display text-lg font-semibold tracking-tight text-gray-900">Active Purchase Orders</h3>
          </div>
          
-         <div className="overflow-auto">
-            <table className="w-full text-left border-collapse">
+         <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[800px]">
                <thead>
                   <tr>
                      <th className="pb-4 pl-2 text-xs font-bold text-gray-400 uppercase tracking-wider">PO Number</th>

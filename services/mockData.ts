@@ -1,8 +1,10 @@
 
+
 import { 
   InventoryItem, ItemStatus, SensitivityLevel, AuditLogEntry, ProductionRun,
   Vendor, PurchaseOrder, PurchaseOrderStatus, Invoice, InvoiceStatus, SalesOrder, SalesOrderStatus,
-  SystemUser, UserRole, ProductionSchedule, CertificateOfConformance, ComplianceMode
+  SystemUser, UserRole, ProductionSchedule, CertificateOfConformance, ComplianceMode,
+  Capa, ValidationDoc, CalibrationItem, EnvironmentalLog
 } from '../types';
 
 export const INITIAL_INVENTORY: InventoryItem[] = [
@@ -238,3 +240,26 @@ export const generateCoC = (salesOrderId: string, mode: ComplianceMode = Complia
         complianceMode: mode
     };
 };
+
+export const INITIAL_CAPAS: Capa[] = [
+    { id: 'CAPA-101', description: 'Heat treat oven deviation', status: 'Closed' },
+    { id: 'CAPA-102', description: 'Material cert missing signature', status: 'Investigation' }
+];
+
+export const INITIAL_VALIDATIONS: ValidationDoc[] = [
+    { id: 'VAL-001', name: 'Autoclave Cycle B', type: 'PQ', status: 'Valid', nextReviewDate: '2025-01-15' },
+    { id: 'VAL-002', name: 'Cleanroom HVAC', type: 'OQ', status: 'Review Needed', nextReviewDate: '2024-11-20' },
+    { id: 'VAL-003', name: 'ERP E-Sig Module', type: 'IQ', status: 'Valid', nextReviewDate: '2025-06-01' }
+];
+
+export const INITIAL_CALIBRATIONS: CalibrationItem[] = [
+    { id: 'CAL-991', instrumentId: 'Digital Caliper #44', nextCalibration: '2024-12-01', status: 'Valid' },
+    { id: 'CAL-992', instrumentId: 'Temp Sensor Z-1', nextCalibration: '2024-10-30', status: 'Expiring Soon' },
+    { id: 'CAL-993', instrumentId: 'Flow Meter FM-02', nextCalibration: '2025-03-15', status: 'Valid' }
+];
+
+export const INITIAL_ENVIRONMENTAL_LOGS: EnvironmentalLog[] = [
+    { id: 'ENV-001', location: 'Cleanroom A', metric: 'Temp', value: '21.4°C', timestamp: new Date().toISOString(), alertLevel: 'Nominal' },
+    { id: 'ENV-002', location: 'Cleanroom A', metric: 'Humidity', value: '42%', timestamp: new Date().toISOString(), alertLevel: 'Nominal' },
+    { id: 'ENV-003', location: 'Storage B', metric: 'Temp', value: '18.1°C', timestamp: new Date().toISOString(), alertLevel: 'Warning' },
+];

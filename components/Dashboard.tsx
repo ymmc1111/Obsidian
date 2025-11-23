@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { TacticalCard, StatWidget } from './Shared';
@@ -69,10 +68,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
   const complianceItems = getComplianceItems();
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-8 h-full overflow-y-auto">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 p-4 md:p-8 h-full overflow-y-auto">
       
       {/* KPI Row */}
-      <div className="md:col-span-1 h-48">
+      <div className="col-span-1 h-40 md:h-48">
         <StatWidget 
           title="Readiness" 
           value="98.4" 
@@ -81,7 +80,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
           color="default"
         />
       </div>
-      <div className="md:col-span-1 h-48">
+      <div className="col-span-1 h-40 md:h-48">
         <StatWidget 
           title="Active NCRs" 
           value="3" 
@@ -90,7 +89,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
           color="orange"
         />
       </div>
-      <div className="md:col-span-1 h-48">
+      <div className="col-span-1 h-40 md:h-48">
         <StatWidget 
           title="Inventory" 
           value="$4.2M" 
@@ -100,7 +99,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
       </div>
       
       {/* Mini Chart Widget */}
-      <TacticalCard className="md:col-span-1 h-48 bg-gray-900 text-white border-none" title="Velocity">
+      <TacticalCard className="col-span-1 h-40 md:h-48 bg-gray-900 text-white border-none" title="Velocity">
          <div className="h-full w-full flex items-end pb-2">
             <ResponsiveContainer width="100%" height="70%">
                 <AreaChart data={DATA}>
@@ -117,9 +116,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
       </TacticalCard>
 
       {/* Main Chart Section */}
-      <TacticalCard title="Production Throughput" className="md:col-span-3 h-96">
+      <TacticalCard title="Production Throughput" className="col-span-1 md:col-span-2 lg:col-span-3 h-80 md:h-96">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={DATA} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+          <BarChart data={DATA} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
             <XAxis 
                 dataKey="name" 
@@ -147,7 +146,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
                 dataKey="value" 
                 fill="#1D1D1F" 
                 radius={[6, 6, 6, 6]} 
-                barSize={40} 
+                barSize={30} 
                 activeBar={{fill: '#007AFF'}}
             />
           </BarChart>
@@ -155,8 +154,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
       </TacticalCard>
 
       {/* Side Feed */}
-      <TacticalCard title={`Compliance (${complianceMode})`} className="md:col-span-1 h-96">
-        <div className="space-y-6 mt-2">
+      <TacticalCard title={`Compliance`} className="col-span-1 md:col-span-2 lg:col-span-1 h-auto md:h-96">
+        <p className="text-xs text-gray-500 -mt-4 mb-4">Mode: {complianceMode}</p>
+        <div className="space-y-4 md:space-y-6">
             {complianceItems.map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors">
                     <div>
@@ -167,14 +167,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
                 </div>
             ))}
             
-            <div className="mt-auto pt-4 border-t border-gray-100">
+            <div className="mt-auto pt-4 border-t border-gray-100 hidden md:block">
                 <p className="text-xs text-gray-400 text-center">System Version 2.4.0</p>
             </div>
         </div>
       </TacticalCard>
 
       {/* AI Sandbox */}
-      <TacticalCard title="Simulate Impact // AI Sandbox" className="md:col-span-2">
+      <TacticalCard title="Simulate Impact // AI Sandbox" className="col-span-1 md:col-span-2">
          <div className="flex flex-col gap-4 mt-2">
             <div className="relative">
                 <Bot className="absolute left-4 top-3 text-gray-400" size={20} />
@@ -183,14 +183,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
                     value={simulationInput}
                     onChange={(e) => setSimulationInput(e.target.value)}
                     placeholder="Enter scenario (e.g., 'What if Vendor X is late?')"
-                    className="w-full bg-gray-50 rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none transition-all"
+                    className="w-full bg-gray-50 rounded-2xl py-3 pl-12 pr-16 text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none transition-all"
                 />
                 <button 
                     onClick={runSimulation}
                     disabled={!simulationInput || isSimulating}
                     className="absolute right-2 top-1.5 px-4 py-1.5 bg-black text-white rounded-xl text-xs font-bold hover:bg-gray-800 transition-colors disabled:opacity-50"
                 >
-                    {isSimulating ? 'Simulating...' : 'Run'}
+                    {isSimulating ? '...' : 'Run'}
                 </button>
             </div>
             {simulationResult && (
@@ -206,14 +206,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ complianceMode }) => {
       </TacticalCard>
 
       {/* Workflow Builder */}
-      <TacticalCard title="Adaptive Workflow Builder" className="md:col-span-2 bg-gray-50 border-dashed border-gray-200">
+      <TacticalCard title="Adaptive Workflow Builder" className="col-span-1 md:col-span-2 bg-gray-50 border-dashed border-gray-200">
          <div className="flex flex-col items-center justify-center h-full py-6 text-center">
             <div className="w-12 h-12 bg-white rounded-2xl shadow-key flex items-center justify-center mb-3 text-gray-400">
                 <Zap size={24} />
             </div>
             <h4 className="text-gray-900 font-bold">No-Code Logic</h4>
             <p className="text-sm text-gray-500 max-w-xs mx-auto mt-1 mb-4">Create event-driven triggers without engineering support.</p>
-            <button className="px-5 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl text-sm font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2">
+            <button className="px-5 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl text-sm font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 w-full md:w-auto justify-center">
                 <Plus size={16} />
                 <span>Create Custom Logic</span>
             </button>

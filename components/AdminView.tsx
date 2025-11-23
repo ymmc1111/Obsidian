@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { INITIAL_USERS } from '../services/mockData';
 import { StatusBadge, TacticalCard } from './Shared';
-import { Users, Shield, Plus, Lock, CheckCircle2, X, Globe, Microscope, Building2 } from 'lucide-react';
+import { Users, Shield, Plus, Lock, CheckCircle2, X, Globe, Microscope, Building2, FileCheck } from 'lucide-react';
 import { SystemUser, UserRole, ComplianceMode } from '../types';
+import { INITIAL_VALIDATIONS } from '../services/mockData';
 
 interface AdminViewProps {
   activeMode: ComplianceMode;
@@ -67,7 +67,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeMode, setMode }) => 
   };
 
   return (
-    <div className="h-full flex flex-col bg-white p-8 gap-8 overflow-y-auto relative">
+    <div className="h-full flex flex-col bg-white p-4 md:p-8 gap-6 md:gap-8 overflow-y-auto relative">
       
       {/* Compliance Governance Panel */}
       <section>
@@ -75,7 +75,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeMode, setMode }) => 
             <h2 className="text-xl font-display font-bold text-gray-900">Adaptive Compliance Governance</h2>
             <p className="text-sm text-gray-500 mt-1">Select the active regulatory framework for the entire ERP system.</p>
          </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {renderComplianceButton(ComplianceMode.DEFENCE, Shield, 'Defense (ITAR)', 'CMMC Level 3 & AS9100D')}
             {renderComplianceButton(ComplianceMode.PHARMA_US, Microscope, 'Pharma US', 'FDA 21 CFR Part 11 & GxP')}
             {renderComplianceButton(ComplianceMode.PHARMA_EU, Building2, 'Pharma EU', 'EU GMP Annex 11')}
@@ -83,25 +83,60 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeMode, setMode }) => 
          </div>
       </section>
 
+      {/* Pharma GxP Validation Section (Conditional) */}
+      {(activeMode === ComplianceMode.PHARMA_US || activeMode === ComplianceMode.PHARMA_EU) && (
+        <section>
+             <TacticalCard title="Validation Documentation (GxP)">
+                 <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[600px]">
+                        <thead>
+                            <tr>
+                                <th className="pb-3 text-xs font-bold text-gray-400 uppercase">Document</th>
+                                <th className="pb-3 text-xs font-bold text-gray-400 uppercase">Type</th>
+                                <th className="pb-3 text-xs font-bold text-gray-400 uppercase">Review Date</th>
+                                <th className="pb-3 text-xs font-bold text-gray-400 uppercase text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {INITIAL_VALIDATIONS.map(doc => (
+                                <tr key={doc.id} className="group hover:bg-gray-50">
+                                    <td className="py-3 text-sm font-bold text-gray-900 flex items-center gap-2">
+                                        <FileCheck size={14} className="text-blue-500" />
+                                        {doc.name}
+                                    </td>
+                                    <td className="py-3 text-xs font-mono text-gray-500">{doc.type}</td>
+                                    <td className="py-3 text-xs text-gray-500">{doc.nextReviewDate}</td>
+                                    <td className="py-3 text-right">
+                                        <StatusBadge status={doc.status} />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                 </div>
+             </TacticalCard>
+        </section>
+      )}
+
       <div className="w-full h-px bg-gray-100" />
 
       {/* User Management Section */}
       <section className="flex-1 flex flex-col">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div>
             <h2 className="text-xl font-display font-bold text-gray-900">User Management Directory</h2>
             <p className="text-sm text-gray-500 mt-1">Manage RBAC policies and user access levels.</p>
             </div>
-            <button className="flex items-center gap-2 bg-black text-white px-5 py-3 rounded-2xl hover:bg-gray-800 transition-all font-bold text-sm shadow-key">
+            <button className="flex items-center justify-center gap-2 bg-black text-white px-5 py-3 rounded-2xl hover:bg-gray-800 transition-all font-bold text-sm shadow-key w-full sm:w-auto">
             <Plus size={18} />
             Create New User
             </button>
         </div>
 
         {/* Users Table */}
-        <div className="bg-white rounded-3xl shadow-soft border border-gray-100 p-6 overflow-hidden flex flex-col">
-            <div className="overflow-auto">
-                <table className="w-full text-left border-collapse">
+        <div className="bg-white rounded-3xl shadow-soft border border-gray-100 p-4 md:p-6 overflow-hidden flex flex-col">
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[700px]">
                 <thead>
                     <tr>
                         <th className="pb-4 pl-2 text-xs font-bold text-gray-400 uppercase tracking-wider">User</th>
@@ -126,7 +161,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeMode, setMode }) => 
                             </div>
                             </td>
                             <td className="py-4">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium whitespace-nowrap">
                                 <Shield size={12} className="text-gray-400" /> {user.role}
                             </span>
                             </td>
@@ -135,7 +170,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeMode, setMode }) => 
                             <td className="py-4 pr-2 text-right">
                             <button 
                                 onClick={() => setEditingUser(user)}
-                                className="text-xs font-bold text-blue-600 hover:text-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+                                className="text-xs font-bold text-blue-600 hover:text-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
                             >
                                 Edit Roles
                             </button>
@@ -150,8 +185,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeMode, setMode }) => 
 
       {/* Role Editor Modal/Overlay */}
       {editingUser && (
-        <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center p-4">
-           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg border border-gray-100 p-8 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex items-center justify-center p-4">
+           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg border border-gray-100 p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200">
               <div className="flex justify-between items-start mb-6">
                  <div>
                     <h3 className="text-2xl font-display font-bold text-gray-900">Edit Permissions</h3>
@@ -162,7 +197,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeMode, setMode }) => 
                  </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-6 max-h-[70vh] overflow-y-auto">
                  <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Assigned Role</label>
                     <div className="grid grid-cols-1 gap-2">

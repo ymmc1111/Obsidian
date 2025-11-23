@@ -82,11 +82,6 @@ export const NavButton = ({
         {label}
       </span>
     )}
-    
-    {/* Active Indicator Dot (Subtle) */}
-    {active && !collapsed && (
-      <div className="absolute right-4 w-1.5 h-1.5 rounded-full bg-black" />
-    )}
   </button>
 );
 

@@ -107,7 +107,7 @@ This document outlines all the core functions users should be able to perform in
 | Pause/Resume Production | ✅ | Production Operator, Admin | Halt or restart a production run | Manage interruptions and downtime |
 | Complete Production Run | ✅ | Quality Inspector, Admin | Mark entire traveler as COMPLETED | Close out finished work |
 | Print Traveler | 📋 | All | Generate PDF of traveler for paper backup | Provide shop floor reference |
-| View Historical Traveler | 📋 | All | Search and view completed runs by Part No. or Run ID | Retrieve full genealogy |
+| View Historical Traveler | ✅ | All | Search and view completed runs by Part No. or Run ID | Retrieve full genealogy |
 
 ### 4. Finance & Procurement
 | Function | Status | User Roles | Action | Goal |

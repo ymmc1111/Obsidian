@@ -5,6 +5,8 @@ import { TacticalCard, Toast } from './Shared';
 import { auditService } from '../services/auditService';
 import { telemetryService } from '../services/telemetryService';
 import { db } from '../services/backend/db'; // Import mock DB to mutate state
+import { TravelerHistoryModal } from './TravelerHistoryModal';
+import { BackendAPI } from '../services/backend/api';
 
 interface ShopFloorViewProps {
     userRole: UserRole;
@@ -20,6 +22,16 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
     const [isSigning, setIsSigning] = useState(false);
     const [attachments, setAttachments] = useState<string[]>([]);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+    // Historical Traveler State
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
+    const [selectedHistoricalTraveler, setSelectedHistoricalTraveler] = useState<ProductionRun | null>(null);
+    const [historicalAuditData, setHistoricalAuditData] = useState<Array<{
+        stepId: string;
+        completedBy: string;
+        timestamp: string;
+        inputData: any;
+    }>>([]);
 
     const showToast = (message: string, type: 'success' | 'error') => {
         setToast({ message, type });
@@ -131,140 +143,212 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
         setAttachments(newAttachments);
     };
 
-    return (
-        <div className="h-full flex flex-col bg-white p-4 md:p-8">
+    const handleViewHistory = async (travelerId: string) => {
+        try {
+            showToast("Loading historical record...", 'success');
+            const { traveler, auditHistory } = await BackendAPI.getTravelerAuditHistory(travelerId);
+            setSelectedHistoricalTraveler(traveler);
+            setHistoricalAuditData(auditHistory);
+            setShowHistoryModal(true);
+        } catch (error) {
+            console.error("Failed to load traveler history:", error);
+            showToast("Failed to load historical record.", 'error');
+        }
+    };
 
-            {/* Header - Minimalist */}
-            <div className="flex justify-between items-center mb-12">
-                <div>
-                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Active Job</p>
-                    <h1 className="text-4xl font-display font-bold text-gray-900">{traveler.partNumber}</h1>
-                </div>
-                <div className="text-right flex items-center gap-4">
-                    <button
-                        onClick={handlePauseResume}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold transition-colors ${currentTraveler.status === 'HALTED' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'}`}
-                    >
-                        {currentTraveler.status === 'HALTED' ? <Play size={18} fill="currentColor" /> : <Pause size={18} fill="currentColor" />}
-                        {currentTraveler.status === 'HALTED' ? 'RESUME JOB' : 'PAUSE JOB'}
-                    </button>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
-                        <Fingerprint size={16} className="text-gray-500" />
-                        <span className="text-sm font-bold text-gray-600 uppercase tracking-wide">{userRole}</span>
-                    </div>
+    // Get completed travelers from DB for the sidebar
+    const completedTravelers = db.tbl_traveler.filter(t => t.status === 'COMPLETED');
+
+    return (
+        <div className="h-full flex">
+            {/* Completed Jobs Sidebar */}
+            <div className="w-80 bg-gray-50 border-r border-gray-100 p-4 overflow-y-auto shrink-0">
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                    Completed Jobs
+                </h3>
+                <div className="space-y-2">
+                    {completedTravelers.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic text-center py-8">
+                            No completed jobs yet
+                        </p>
+                    ) : (
+                        completedTravelers.map((traveler) => (
+                            <button
+                                key={traveler.id}
+                                onClick={() => handleViewHistory(traveler.id)}
+                                className="w-full p-3 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all text-left group"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                            {traveler.partNumber}
+                                        </p>
+                                        <p className="text-xs text-gray-500 font-mono">
+                                            {traveler.id}
+                                        </p>
+                                    </div>
+                                    <div className="p-1.5 bg-green-50 text-green-600 rounded-lg">
+                                        <Check size={14} />
+                                    </div>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-gray-100">
+                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">
+                                        {traveler.quantity} units • Click to view history
+                                    </p>
+                                </div>
+                            </button>
+                        ))
+                    )}
                 </div>
             </div>
 
-            {/* Main Workspace */}
-            <div className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto w-full gap-12">
+            {/* Main Shop Floor Area */}
+            <div className="flex-1 flex flex-col bg-white p-4 md:p-8">
 
-                {/* Step Display */}
-                <div className="w-full text-center space-y-6">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-black text-white rounded-2xl text-2xl font-bold shadow-xl mb-4">
-                        {isJobComplete ? <Check size={32} /> : (currentStep?.order || 'END')}
+                {/* Header - Minimalist */}
+                <div className="flex justify-between items-center mb-12">
+                    <div>
+                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Active Job</p>
+                        <h1 className="text-4xl font-display font-bold text-gray-900">{traveler.partNumber}</h1>
                     </div>
-                    <h2 className="text-3xl md:text-5xl font-display font-bold text-gray-900 leading-tight">
-                        {isJobComplete ? "JOB COMPLETE. READY FOR SHIPMENT." : (currentStep?.instruction || "Waiting for next step.")}
-                    </h2>
-                    {!isJobComplete && (
-                        <p className="text-xl text-gray-500 font-medium max-w-2xl mx-auto">
-                            Verify all tolerances match Spec Sheet A-10 before proceeding.
-                        </p>
-                    )}
-                    {currentStep && (
-                        <div className="flex flex-col items-center gap-2">
-                            <p className="text-sm font-bold uppercase tracking-wide text-gray-600">
-                                Required Role: <span className={isRoleAuthorized ? 'text-green-600' : 'text-red-500'}>{currentStep.requiredRole}</span>
-                            </p>
-
-                            {/* Attachment Area */}
-                            <div className="mt-4 flex flex-wrap justify-center gap-2">
-                                {attachments.map((file, idx) => (
-                                    <div key={idx} className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg text-xs font-medium text-gray-700">
-                                        <Paperclip size={12} />
-                                        {file}
-                                        <button onClick={() => removeAttachment(idx)} className="hover:text-red-500"><X size={12} /></button>
-                                    </div>
-                                ))}
-                                <label className="cursor-pointer flex items-center gap-2 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-bold transition-colors">
-                                    <Paperclip size={12} />
-                                    Attach Evidence
-                                    <input type="file" className="hidden" onChange={handleFileUpload} />
-                                </label>
-                            </div>
+                    <div className="text-right flex items-center gap-4">
+                        <button
+                            onClick={handlePauseResume}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold transition-colors ${currentTraveler.status === 'HALTED' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'}`}
+                        >
+                            {currentTraveler.status === 'HALTED' ? <Play size={18} fill="currentColor" /> : <Pause size={18} fill="currentColor" />}
+                            {currentTraveler.status === 'HALTED' ? 'RESUME JOB' : 'PAUSE JOB'}
+                        </button>
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
+                            <Fingerprint size={16} className="text-gray-500" />
+                            <span className="text-sm font-bold text-gray-600 uppercase tracking-wide">{userRole}</span>
                         </div>
-                    )}
+                    </div>
                 </div>
 
-                {/* Action Area - Role Based */}
-                <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                {/* Main Workspace */}
+                <div className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto w-full gap-12">
 
-                    {/* Primary Action (A. Step Sign-Off) */}
-                    <button
-                        onClick={handleVerifySign}
-                        disabled={isSigning || isJobComplete || !isRoleAuthorized || currentTraveler.status === 'HALTED'}
-                        className={`
+                    {/* Step Display */}
+                    <div className="w-full text-center space-y-6">
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-black text-white rounded-2xl text-2xl font-bold shadow-xl mb-4">
+                            {isJobComplete ? <Check size={32} /> : (currentStep?.order || 'END')}
+                        </div>
+                        <h2 className="text-3xl md:text-5xl font-display font-bold text-gray-900 leading-tight">
+                            {isJobComplete ? "JOB COMPLETE. READY FOR SHIPMENT." : (currentStep?.instruction || "Waiting for next step.")}
+                        </h2>
+                        {!isJobComplete && (
+                            <p className="text-xl text-gray-500 font-medium max-w-2xl mx-auto">
+                                Verify all tolerances match Spec Sheet A-10 before proceeding.
+                            </p>
+                        )}
+                        {currentStep && (
+                            <div className="flex flex-col items-center gap-2">
+                                <p className="text-sm font-bold uppercase tracking-wide text-gray-600">
+                                    Required Role: <span className={isRoleAuthorized ? 'text-green-600' : 'text-red-500'}>{currentStep.requiredRole}</span>
+                                </p>
+
+                                {/* Attachment Area */}
+                                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                                    {attachments.map((file, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg text-xs font-medium text-gray-700">
+                                            <Paperclip size={12} />
+                                            {file}
+                                            <button onClick={() => removeAttachment(idx)} className="hover:text-red-500"><X size={12} /></button>
+                                        </div>
+                                    ))}
+                                    <label className="cursor-pointer flex items-center gap-2 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-bold transition-colors">
+                                        <Paperclip size={12} />
+                                        Attach Evidence
+                                        <input type="file" className="hidden" onChange={handleFileUpload} />
+                                    </label>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Action Area - Role Based */}
+                    <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+
+                        {/* Primary Action (A. Step Sign-Off) */}
+                        <button
+                            onClick={handleVerifySign}
+                            disabled={isSigning || isJobComplete || !isRoleAuthorized || currentTraveler.status === 'HALTED'}
+                            className={`
                         col-span-1 md:col-span-2
                         h-32 rounded-[2.5rem] text-white 
                         flex items-center justify-center gap-4 
                         shadow-2xl transition-all
                         ${isJobComplete || !isRoleAuthorized || currentTraveler.status === 'HALTED' ? 'bg-gray-400 opacity-80 cursor-not-allowed' : 'bg-black hover:scale-[1.02] active:scale-95'}
                     `}
-                    >
-                        {isSigning ? (
-                            <span className="text-2xl font-bold animate-pulse">Authenticating...</span>
-                        ) : (
-                            <>
-                                <Check size={40} strokeWidth={3} />
-                                <span className="text-3xl font-display font-bold tracking-tight">VERIFY & SIGN (A)</span>
-                            </>
-                        )}
-                    </button>
-
-                    {/* QA Action (B. Report Deviation) */}
-                    {(userRole === UserRole.QUALITY_INSPECTOR || userRole === UserRole.PRODUCTION_OPERATOR) && !isJobComplete && (
-                        <button
-                            onClick={handleReportDeviation}
-                            className="h-24 rounded-[2rem] bg-red-50 text-red-600 border-2 border-red-100 flex items-center justify-center gap-3 hover:bg-red-100 transition-colors"
                         >
-                            <AlertTriangle size={28} />
-                            <span className="text-xl font-bold uppercase tracking-wide">Report Deviation (B)</span>
+                            {isSigning ? (
+                                <span className="text-2xl font-bold animate-pulse">Authenticating...</span>
+                            ) : (
+                                <>
+                                    <Check size={40} strokeWidth={3} />
+                                    <span className="text-3xl font-display font-bold tracking-tight">VERIFY & SIGN (A)</span>
+                                </>
+                            )}
                         </button>
-                    )}
 
-                    {/* Trace Action (C. View Traceability Log - Mocked as a button to prompt user to move to Trace View) */}
-                    {(userRole === UserRole.LOGISTICS_SPECIALIST || userRole === UserRole.QUALITY_INSPECTOR) && (
-                        <button
-                            onClick={() => alert("Navigate to the Traceability View for full Genealogy Tree (C).")}
-                            className={`h-24 rounded-[2rem] bg-blue-50 text-blue-600 border-2 border-blue-100 flex items-center justify-center gap-3 hover:bg-blue-100 transition-colors 
+                        {/* QA Action (B. Report Deviation) */}
+                        {(userRole === UserRole.QUALITY_INSPECTOR || userRole === UserRole.PRODUCTION_OPERATOR) && !isJobComplete && (
+                            <button
+                                onClick={handleReportDeviation}
+                                className="h-24 rounded-[2rem] bg-red-50 text-red-600 border-2 border-red-100 flex items-center justify-center gap-3 hover:bg-red-100 transition-colors"
+                            >
+                                <AlertTriangle size={28} />
+                                <span className="text-xl font-bold uppercase tracking-wide">Report Deviation (B)</span>
+                            </button>
+                        )}
+
+                        {/* Trace Action (C. View Traceability Log - Mocked as a button to prompt user to move to Trace View) */}
+                        {(userRole === UserRole.LOGISTICS_SPECIALIST || userRole === UserRole.QUALITY_INSPECTOR) && (
+                            <button
+                                onClick={() => alert("Navigate to the Traceability View for full Genealogy Tree (C).")}
+                                className={`h-24 rounded-[2rem] bg-blue-50 text-blue-600 border-2 border-blue-100 flex items-center justify-center gap-3 hover:bg-blue-100 transition-colors 
                            ${userRole === UserRole.LOGISTICS_SPECIALIST && (userRole !== UserRole.QUALITY_INSPECTOR && userRole !== UserRole.PRODUCTION_OPERATOR) ? 'col-span-1 md:col-span-2' : ''}
                         `}
-                        >
-                            <Search size={28} />
-                            <span className="text-xl font-bold uppercase tracking-wide">Trace Batch Genealogy (C)</span>
-                        </button>
-                    )}
+                            >
+                                <Search size={28} />
+                                <span className="text-xl font-bold uppercase tracking-wide">Trace Batch Genealogy (C)</span>
+                            </button>
+                        )}
 
-                    {/* Info Card (Generic fallback for non-QA/Logistics users) */}
-                    {!(userRole === UserRole.QUALITY_INSPECTOR || userRole === UserRole.PRODUCTION_OPERATOR || userRole === UserRole.LOGISTICS_SPECIALIST) && (
-                        <div className="h-24 rounded-[2rem] bg-gray-50 border-2 border-gray-100 flex items-center justify-center gap-3 text-gray-400 col-span-1 md:col-span-2">
-                            <ShieldCheck size={24} />
-                            <span className="font-medium">Secure Session Active</span>
-                        </div>
-                    )}
+                        {/* Info Card (Generic fallback for non-QA/Logistics users) */}
+                        {!(userRole === UserRole.QUALITY_INSPECTOR || userRole === UserRole.PRODUCTION_OPERATOR || userRole === UserRole.LOGISTICS_SPECIALIST) && (
+                            <div className="h-24 rounded-[2rem] bg-gray-50 border-2 border-gray-100 flex items-center justify-center gap-3 text-gray-400 col-span-1 md:col-span-2">
+                                <ShieldCheck size={24} />
+                                <span className="font-medium">Secure Session Active</span>
+                            </div>
+                        )}
+                    </div>
+
                 </div>
 
+                {/* Footer */}
+                <div className="mt-auto pt-8 border-t border-gray-100 flex justify-between items-center text-gray-400 text-sm font-medium">
+                    <span>Terminal ID: T-800</span>
+                    <span>Uptime: 4d 12h</span>
+                </div>
+
+                {/* Toast Notification */}
+                {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+                {/* Historical Traveler Modal */}
+                {showHistoryModal && selectedHistoricalTraveler && (
+                    <TravelerHistoryModal
+                        traveler={selectedHistoricalTraveler}
+                        auditHistory={historicalAuditData}
+                        onClose={() => {
+                            setShowHistoryModal(false);
+                            setSelectedHistoricalTraveler(null);
+                            setHistoricalAuditData([]);
+                        }}
+                    />
+                )}
             </div>
-
-            {/* Footer */}
-            <div className="mt-auto pt-8 border-t border-gray-100 flex justify-between items-center text-gray-400 text-sm font-medium">
-                <span>Terminal ID: T-800</span>
-                <span>Uptime: 4d 12h</span>
-            </div>
-
-            {/* Toast Notification */}
-            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
         </div>
     );
 };

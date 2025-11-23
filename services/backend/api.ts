@@ -467,5 +467,38 @@ export const BackendAPI = {
       affectedCount: affectedItems.length,
       actionId: `RECALL-${Date.now()}`
     };
+  },
+
+  // --- Phase 4: Historical Traceability ---
+
+  getTravelerAuditHistory: async (travelerId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300)); // Simulate DB query
+
+    // Find the traveler in the DB
+    const travelerRecord = db.tbl_traveler.find(t => t.id === travelerId);
+    if (!travelerRecord) {
+      throw new Error(`Traveler ${travelerId} not found`);
+    }
+
+    // Reconstruct the full traveler with step data
+    const fullTraveler = reconstructTraveler(travelerId);
+
+    // Get all step completion records for this traveler
+    const stepRecords = db.tbl_traveler_steps_data.filter(
+      step => step.travelerId === travelerId
+    );
+
+    // Map step records to audit history format
+    const auditHistory = stepRecords.map(record => ({
+      stepId: record.stepId,
+      completedBy: record.completedBy_userId,
+      timestamp: record.timestamp,
+      inputData: JSON.parse(record.input_value || '{}')
+    }));
+
+    return {
+      traveler: fullTraveler,
+      auditHistory
+    };
   }
 };

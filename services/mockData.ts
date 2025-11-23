@@ -2,7 +2,7 @@
 import { 
   InventoryItem, ItemStatus, SensitivityLevel, AuditLogEntry, ProductionRun,
   Vendor, PurchaseOrder, PurchaseOrderStatus, Invoice, InvoiceStatus, SalesOrder, SalesOrderStatus,
-  SystemUser, UserRole
+  SystemUser, UserRole, ProductionSchedule
 } from '../types';
 
 export const INITIAL_INVENTORY: InventoryItem[] = [
@@ -201,4 +201,11 @@ export const INITIAL_USERS: SystemUser[] = [
   { id: 'U-003', name: 'T. Stark', email: 't.stark@pocketops.mil', role: UserRole.QUALITY_INSPECTOR, status: 'Active', lastActive: '5m ago' },
   { id: 'U-004', name: 'B. Banner', email: 'b.banner@pocketops.mil', role: UserRole.PRODUCTION_OPERATOR, status: 'Locked', lastActive: '2d ago' },
   { id: 'U-005', name: 'N. Romanoff', email: 'n.romanoff@pocketops.mil', role: UserRole.LOGISTICS_SPECIALIST, status: 'Active', lastActive: '1h ago' },
+];
+
+export const INITIAL_SCHEDULES: ProductionSchedule[] = [
+  { id: 'SCH-2024-101', partNumber: 'XB-70-TI', plannedQty: 500, startDate: '2024-11-01', machineCenter: 'CNC-Lathe-A', loadFactor: 85, status: 'Scheduled' },
+  { id: 'SCH-2024-102', partNumber: 'GUID-SYS-V4', plannedQty: 20, startDate: '2024-11-05', machineCenter: 'Assembly-Cleanroom', loadFactor: 45, status: 'Scheduled' },
+  { id: 'SCH-2024-103', partNumber: 'AL-SHEET-7075', plannedQty: 100, startDate: '2024-10-28', machineCenter: 'Cutting-Bay-1', loadFactor: 92, status: 'Delayed' },
+  { id: 'SCH-2024-104', partNumber: 'THRUSTER-NZL-09', plannedQty: 4, startDate: '2024-11-12', machineCenter: '3D-Print-Metal', loadFactor: 60, status: 'In Progress' },
 ];

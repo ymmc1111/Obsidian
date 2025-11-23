@@ -139,3 +139,13 @@ export interface SystemUser {
   status: 'Active' | 'Locked';
   lastActive: string;
 }
+
+export interface ProductionSchedule {
+  id: string;
+  partNumber: string;
+  plannedQty: number;
+  startDate: string;
+  machineCenter: string;
+  loadFactor: number; // 0-100 percentage
+  status: 'Scheduled' | 'Delayed' | 'In Progress';
+}

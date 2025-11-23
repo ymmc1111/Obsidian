@@ -9,7 +9,8 @@ import {
   DollarSign,
   ClipboardList,
   Truck,
-  Users
+  Users,
+  CalendarCheck
 } from 'lucide-react';
 import { NavButton } from './components/Shared';
 import { Dashboard } from './components/Dashboard';
@@ -19,6 +20,7 @@ import { ProcurementView } from './components/ProcurementView';
 import { FinanceView } from './components/FinanceView';
 import { OrdersView } from './components/OrdersView';
 import { AdminView } from './components/AdminView';
+import { PlanningView } from './components/PlanningView';
 import { Login } from './components/Login';
 import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_LOGS } from './services/mockData';
 
@@ -29,6 +31,7 @@ enum View {
   PROCUREMENT,
   FINANCE,
   ORDERS,
+  PLANNING,
   ADMIN
 }
 
@@ -113,6 +116,13 @@ const App: React.FC = () => {
             onClick={() => setCurrentView(View.FINANCE)} 
             collapsed={sidebarCollapsed}
           />
+          <NavButton 
+            icon={CalendarCheck} 
+            label="Planning & Logistics" 
+            active={currentView === View.PLANNING} 
+            onClick={() => setCurrentView(View.PLANNING)} 
+            collapsed={sidebarCollapsed}
+          />
           <div className="h-px bg-gray-200 mx-4 my-2" />
           <NavButton 
             icon={Users} 
@@ -160,6 +170,7 @@ const App: React.FC = () => {
                 {currentView === View.PROCUREMENT && 'P2P Control Grid'}
                 {currentView === View.FINANCE && 'Financial Command'}
                 {currentView === View.ORDERS && 'Global Order Dispatch'}
+                {currentView === View.PLANNING && 'Production Planning & Logistics'}
                 {currentView === View.ADMIN && 'System Administration'}
               </h2>
             </div>
@@ -179,6 +190,7 @@ const App: React.FC = () => {
              {currentView === View.PROCUREMENT && <ProcurementView />}
              {currentView === View.FINANCE && <FinanceView />}
              {currentView === View.ORDERS && <OrdersView />}
+             {currentView === View.PLANNING && <PlanningView />}
              {currentView === View.ADMIN && <AdminView />}
           </div>
 

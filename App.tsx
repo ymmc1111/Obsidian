@@ -12,7 +12,8 @@ import {
   CalendarCheck,
   Menu,
   X,
-  Map
+  Map,
+  Target
 } from 'lucide-react';
 import { NavButton } from './components/Shared';
 import { Dashboard } from './components/Dashboard';
@@ -24,6 +25,7 @@ import { OrdersView } from './components/OrdersView';
 import { AdminView } from './components/AdminView';
 import { PlanningView } from './components/PlanningView';
 import { LogisticsView } from './components/LogisticsView';
+import { TraceView } from './components/TraceView';
 import { Login } from './components/Login';
 import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_LOGS } from './services/mockData';
 import { ComplianceMode } from './types';
@@ -31,6 +33,7 @@ import { ComplianceMode } from './types';
 enum View {
   DASHBOARD,
   INVENTORY,
+  TRACEABILITY,
   MANUFACTURING,
   PROCUREMENT,
   FINANCE,
@@ -134,6 +137,13 @@ const App: React.FC = () => {
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
           <NavButton 
+            icon={Target} 
+            label="Traceability" 
+            active={currentView === View.TRACEABILITY} 
+            onClick={() => setCurrentView(View.TRACEABILITY)} 
+            collapsed={sidebarCollapsed && !mobileMenuOpen}
+          />
+          <NavButton 
             icon={Factory} 
             label="Production" 
             active={currentView === View.MANUFACTURING} 
@@ -227,6 +237,7 @@ const App: React.FC = () => {
               <h2 className="text-lg md:text-2xl font-display font-bold tracking-tight text-gray-900 truncate max-w-[200px] md:max-w-none">
                 {currentView === View.DASHBOARD && 'Mission Control'}
                 {currentView === View.INVENTORY && 'Materials & Assets'}
+                {currentView === View.TRACEABILITY && 'Visual Genealogy'}
                 {currentView === View.MANUFACTURING && 'Assembly Line'}
                 {currentView === View.PROCUREMENT && 'P2P Control Grid'}
                 {currentView === View.FINANCE && 'Financial Command'}
@@ -248,6 +259,7 @@ const App: React.FC = () => {
           <div className="flex-1 overflow-auto bg-white relative">
              {currentView === View.DASHBOARD && <Dashboard complianceMode={activeComplianceMode} />}
              {currentView === View.INVENTORY && <InventoryView items={INITIAL_INVENTORY} />}
+             {currentView === View.TRACEABILITY && <TraceView />}
              {currentView === View.MANUFACTURING && <TravelerView traveler={MOCK_TRAVELER} complianceMode={activeComplianceMode} />}
              {currentView === View.PROCUREMENT && <ProcurementView />}
              {currentView === View.FINANCE && <FinanceView complianceMode={activeComplianceMode} />}

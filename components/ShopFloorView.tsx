@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ProductionRun, UserRole, TravelerStep } from '../types';
-import { Check, AlertTriangle, Search, ArrowRight, ShieldCheck, Fingerprint, Box, Pause, Play, Paperclip, X } from 'lucide-react';
+import { Check, AlertTriangle, Search, ArrowRight, ShieldCheck, Fingerprint, Box, Pause, Play, Paperclip, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TacticalCard, Toast } from './Shared';
 import { auditService } from '../services/auditService';
 import { telemetryService } from '../services/telemetryService';
@@ -32,6 +32,9 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
         timestamp: string;
         inputData: any;
     }>>([]);
+
+    // Sidebar visibility state
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     const showToast = (message: string, type: 'success' | 'error') => {
         setToast({ message, type });
@@ -160,47 +163,61 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
     const completedTravelers = db.tbl_traveler.filter(t => t.status === 'COMPLETED');
 
     return (
-        <div className="h-full flex">
-            {/* Completed Jobs Sidebar */}
-            <div className="w-80 bg-gray-50 border-r border-gray-100 p-4 overflow-y-auto shrink-0">
-                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
-                    Completed Jobs
-                </h3>
-                <div className="space-y-2">
-                    {completedTravelers.length === 0 ? (
-                        <p className="text-xs text-gray-400 italic text-center py-8">
-                            No completed jobs yet
-                        </p>
-                    ) : (
-                        completedTravelers.map((traveler) => (
-                            <button
-                                key={traveler.id}
-                                onClick={() => handleViewHistory(traveler.id)}
-                                className="w-full p-3 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all text-left group"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                                            {traveler.partNumber}
-                                        </p>
-                                        <p className="text-xs text-gray-500 font-mono">
-                                            {traveler.id}
-                                        </p>
-                                    </div>
-                                    <div className="p-1.5 bg-green-50 text-green-600 rounded-lg">
-                                        <Check size={14} />
-                                    </div>
-                                </div>
-                                <div className="mt-2 pt-2 border-t border-gray-100">
-                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">
-                                        {traveler.quantity} units • Click to view history
-                                    </p>
-                                </div>
-                            </button>
-                        ))
-                    )}
-                </div>
+        <div className="h-full flex relative">
+            {/* Jobs Sidebar - Collapsible */}
+            <div className={`bg-gray-50 border-r border-gray-100 p-4 overflow-y-auto shrink-0 transition-all duration-300 ${isSidebarOpen ? 'w-80' : 'w-0 p-0'}`}>
+                {isSidebarOpen && (
+                    <>
+                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                            Jobs
+                        </h3>
+                        <div className="space-y-2">
+                            {completedTravelers.length === 0 ? (
+                                <p className="text-xs text-gray-400 italic text-center py-8">
+                                    No completed jobs yet
+                                </p>
+                            ) : (
+                                completedTravelers.map((traveler) => (
+                                    <button
+                                        key={traveler.id}
+                                        onClick={() => handleViewHistory(traveler.id)}
+                                        className="w-full p-3 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all text-left group"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                                    {traveler.partNumber}
+                                                </p>
+                                                <p className="text-xs text-gray-500 font-mono">
+                                                    {traveler.id}
+                                                </p>
+                                            </div>
+                                            <div className="p-1.5 bg-green-50 text-green-600 rounded-lg">
+                                                <Check size={14} />
+                                            </div>
+                                        </div>
+                                        <div className="mt-2 pt-2 border-t border-gray-100">
+                                            <p className="text-[10px] text-gray-400 uppercase tracking-wider">
+                                                {traveler.quantity} units • Click to view history
+                                            </p>
+                                        </div>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    </>
+                )}
             </div>
+
+            {/* Sidebar Toggle Button */}
+            <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white border border-gray-200 rounded-r-xl shadow-md hover:bg-gray-50 transition-all"
+                style={{ left: isSidebarOpen ? '20rem' : '0' }}
+                title={isSidebarOpen ? 'Hide Jobs' : 'Show Jobs'}
+            >
+                {isSidebarOpen ? <ChevronLeft size={20} className="text-gray-600" /> : <ChevronRight size={20} className="text-gray-600" />}
+            </button>
 
             {/* Main Shop Floor Area */}
             <div className="flex-1 flex flex-col bg-white p-4 md:p-8">

@@ -35,6 +35,14 @@ export enum SalesOrderStatus {
   BACKORDERED = 'BACKORDERED'
 }
 
+export enum UserRole {
+  ADMIN = 'Admin',
+  FINANCIAL_OFFICER = 'Financial Officer',
+  QUALITY_INSPECTOR = 'Quality Inspector',
+  PRODUCTION_OPERATOR = 'Production Operator',
+  LOGISTICS_SPECIALIST = 'Logistics Specialist'
+}
+
 export interface InventoryItem {
   id: string;
   partNumber: string;
@@ -121,4 +129,13 @@ export interface SalesOrder {
   status: SalesOrderStatus;
   fulfillmentLocation: string;
   backorderedItems: number;
+}
+
+export interface SystemUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: 'Active' | 'Locked';
+  lastActive: string;
 }

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   LayoutGrid, 
@@ -7,7 +8,8 @@ import {
   Activity,
   DollarSign,
   ClipboardList,
-  Truck
+  Truck,
+  Users
 } from 'lucide-react';
 import { NavButton } from './components/Shared';
 import { Dashboard } from './components/Dashboard';
@@ -16,6 +18,7 @@ import { TravelerView } from './components/TravelerView';
 import { ProcurementView } from './components/ProcurementView';
 import { FinanceView } from './components/FinanceView';
 import { OrdersView } from './components/OrdersView';
+import { AdminView } from './components/AdminView';
 import { Login } from './components/Login';
 import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_LOGS } from './services/mockData';
 
@@ -110,6 +113,14 @@ const App: React.FC = () => {
             onClick={() => setCurrentView(View.FINANCE)} 
             collapsed={sidebarCollapsed}
           />
+          <div className="h-px bg-gray-200 mx-4 my-2" />
+          <NavButton 
+            icon={Users} 
+            label="Admin" 
+            active={currentView === View.ADMIN} 
+            onClick={() => setCurrentView(View.ADMIN)} 
+            collapsed={sidebarCollapsed}
+          />
         </nav>
 
         {/* User Profile "Key" */}
@@ -149,6 +160,7 @@ const App: React.FC = () => {
                 {currentView === View.PROCUREMENT && 'P2P Control Grid'}
                 {currentView === View.FINANCE && 'Financial Command'}
                 {currentView === View.ORDERS && 'Global Order Dispatch'}
+                {currentView === View.ADMIN && 'System Administration'}
               </h2>
             </div>
             <div className="flex items-center gap-4">
@@ -167,6 +179,7 @@ const App: React.FC = () => {
              {currentView === View.PROCUREMENT && <ProcurementView />}
              {currentView === View.FINANCE && <FinanceView />}
              {currentView === View.ORDERS && <OrdersView />}
+             {currentView === View.ADMIN && <AdminView />}
           </div>
 
           {/* Live Audit Ticker (Bottom) */}

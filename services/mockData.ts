@@ -1,7 +1,8 @@
 
 import { 
   InventoryItem, ItemStatus, SensitivityLevel, AuditLogEntry, ProductionRun,
-  Vendor, PurchaseOrder, PurchaseOrderStatus, Invoice, InvoiceStatus, SalesOrder, SalesOrderStatus
+  Vendor, PurchaseOrder, PurchaseOrderStatus, Invoice, InvoiceStatus, SalesOrder, SalesOrderStatus,
+  SystemUser, UserRole
 } from '../types';
 
 export const INITIAL_INVENTORY: InventoryItem[] = [
@@ -192,4 +193,12 @@ export const INITIAL_ORDERS: SalesOrder[] = [
     fulfillmentLocation: 'US-East WH (Secure)',
     backorderedItems: 0
   }
+];
+
+export const INITIAL_USERS: SystemUser[] = [
+  { id: 'U-001', name: 'J. Doe', email: 'j.doe@pocketops.mil', role: UserRole.ADMIN, status: 'Active', lastActive: 'Now' },
+  { id: 'U-002', name: 'S. Connor', email: 's.connor@pocketops.mil', role: UserRole.FINANCIAL_OFFICER, status: 'Active', lastActive: '2h ago' },
+  { id: 'U-003', name: 'T. Stark', email: 't.stark@pocketops.mil', role: UserRole.QUALITY_INSPECTOR, status: 'Active', lastActive: '5m ago' },
+  { id: 'U-004', name: 'B. Banner', email: 'b.banner@pocketops.mil', role: UserRole.PRODUCTION_OPERATOR, status: 'Locked', lastActive: '2d ago' },
+  { id: 'U-005', name: 'N. Romanoff', email: 'n.romanoff@pocketops.mil', role: UserRole.LOGISTICS_SPECIALIST, status: 'Active', lastActive: '1h ago' },
 ];

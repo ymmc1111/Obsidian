@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { INITIAL_ORDERS, generateCoC } from '../services/mockData';
 import { TacticalCard, StatusBadge, Toast } from './Shared';
-import { Globe, Truck, RotateCcw, Box, RefreshCcw, FileCheck, CheckCircle2, FileText } from 'lucide-react';
-import { SalesOrder, CertificateOfConformance, ComplianceMode } from '../types';
+import { Globe, Truck, RotateCcw, Box, RefreshCcw, FileCheck, CheckCircle2, FileText, Plus, X, Edit, Package } from 'lucide-react';
+import { SalesOrder, CertificateOfConformance, ComplianceMode, SalesOrderStatus } from '../types';
 import { telemetryService } from '../services/telemetryService';
 
 interface OrdersViewProps {
@@ -18,6 +18,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
    const showToast = (message: string, type: 'success' | 'error') => {
       setToast({ message, type });
    };
+
+   // Sales Order Form State
+   const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
+   const [editingOrder, setEditingOrder] = useState<SalesOrder | null>(null);
 
    // Action: Reroute Order
    const rerouteOrder = (id: string) => {
@@ -64,6 +68,47 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
       document.body.removeChild(link);
 
       showToast(`Packing List generated for ${orderId}`, 'success');
+   };
+
+   // Create/Update Sales Order
+   const handleSaveOrder = (orderData: Omit<SalesOrder, 'id'>) => {
+      if (editingOrder) {
+         // Update existing order
+         setOrders(prev => prev.map(o =>
+            o.id === editingOrder.id ? { ...orderData, id: editingOrder.id } : o
+         ));
+         showToast(`Order ${editingOrder.id} updated successfully`, 'success');
+      } else {
+         // Create new order
+         const newOrder: SalesOrder = {
+            ...orderData,
+            id: `SO-${Date.now()}`
+         };
+         setOrders(prev => [newOrder, ...prev]);
+         showToast(`Order ${newOrder.id} created successfully`, 'success');
+      }
+      setIsOrderFormOpen(false);
+      setEditingOrder(null);
+   };
+
+   // Update Order Status
+   const handleUpdateStatus = (orderId: string, newStatus: SalesOrderStatus) => {
+      setOrders(prev => prev.map(o =>
+         o.id === orderId ? { ...o, status: newStatus } : o
+      ));
+      showToast(`Order ${orderId} status updated to ${newStatus}`, 'success');
+   };
+
+   // Allocate Inventory (Mock)
+   const handleAllocateInventory = (orderId: string) => {
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+
+      // Mock allocation logic
+      setOrders(prev => prev.map(o =>
+         o.id === orderId ? { ...o, backorderedItems: 0 } : o
+      ));
+      showToast(`Inventory allocated for order ${orderId}`, 'success');
    };
 
    return (
@@ -121,13 +166,25 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
          <div className="flex-1 bg-white rounded-3xl shadow-soft border border-gray-100 p-4 md:p-6 overflow-hidden flex flex-col">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                <h3 className="font-display text-lg font-semibold tracking-tight text-gray-900">Global Sales Orders</h3>
-               <button
-                  onClick={handleGenerateCoC}
-                  className="flex items-center gap-2 text-sm font-bold bg-black text-white px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors shadow-key w-full sm:w-auto justify-center"
-               >
-                  <FileCheck size={16} />
-                  Generate CoC
-               </button>
+               <div className="flex gap-2 w-full sm:w-auto">
+                  <button
+                     onClick={handleGenerateCoC}
+                     className="flex items-center gap-2 text-sm font-bold bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors shadow-sm flex-1 sm:flex-initial justify-center"
+                  >
+                     <FileCheck size={16} />
+                     Generate CoC
+                  </button>
+                  <button
+                     onClick={() => {
+                        setEditingOrder(null);
+                        setIsOrderFormOpen(true);
+                     }}
+                     className="flex items-center gap-2 text-sm font-bold bg-black text-white px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors shadow-key flex-1 sm:flex-initial justify-center"
+                  >
+                     <Plus size={16} />
+                     Create Order
+                  </button>
+               </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -140,7 +197,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
                         <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Backorder</th>
                         <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Total</th>
                         <th className="pb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                        <th className="pb-4 pr-2 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Route Control</th>
+                        <th className="pb-4 pr-2 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</th>
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -167,6 +224,25 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
                            </td>
                            <td className="py-4 pr-2 text-right">
                               <div className="flex justify-end gap-2">
+                                 {so.backorderedItems > 0 && (
+                                    <button
+                                       onClick={() => handleAllocateInventory(so.id)}
+                                       className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+                                       title="Allocate Inventory"
+                                    >
+                                       <Package size={16} />
+                                    </button>
+                                 )}
+                                 <button
+                                    onClick={() => {
+                                       setEditingOrder(so);
+                                       setIsOrderFormOpen(true);
+                                    }}
+                                    className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                    title="Edit Order"
+                                 >
+                                    <Edit size={16} />
+                                 </button>
                                  <button
                                     onClick={() => handleGeneratePackingList(so.id)}
                                     className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
@@ -176,9 +252,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
                                  </button>
                                  <button
                                     onClick={() => rerouteOrder(so.id)}
-                                    className="text-xs font-bold text-gray-500 hover:text-black hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2"
+                                    className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                    title="Reroute Order"
                                  >
-                                    <RefreshCcw size={12} /> Reroute
+                                    <RefreshCcw size={16} />
                                  </button>
                               </div>
                            </td>
@@ -234,8 +311,195 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ complianceMode }) => {
             </div>
          )}
 
+         {/* Sales Order Form Modal */}
+         {isOrderFormOpen && (
+            <SalesOrderForm
+               order={editingOrder}
+               onClose={() => {
+                  setIsOrderFormOpen(false);
+                  setEditingOrder(null);
+               }}
+               onSave={handleSaveOrder}
+               onUpdateStatus={editingOrder ? handleUpdateStatus : undefined}
+            />
+         )}
+
          {/* Toast Notification */}
          {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      </div>
+   );
+};
+
+// Sales Order Form Component
+const SalesOrderForm = ({
+   order,
+   onClose,
+   onSave,
+   onUpdateStatus
+}: {
+   order: SalesOrder | null;
+   onClose: () => void;
+   onSave: (order: Omit<SalesOrder, 'id'>) => void;
+   onUpdateStatus?: (orderId: string, status: SalesOrderStatus) => void;
+}) => {
+   const [formData, setFormData] = useState<Omit<SalesOrder, 'id'>>({
+      customer: order?.customer || '',
+      date: order?.date || new Date().toISOString().split('T')[0],
+      totalAmount: order?.totalAmount || 0,
+      status: order?.status || SalesOrderStatus.NEW,
+      fulfillmentLocation: order?.fulfillmentLocation || 'US-East WH (Secure)',
+      backorderedItems: order?.backorderedItems || 0
+   });
+
+   const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      onSave(formData);
+   };
+
+   const handleStatusChange = (newStatus: SalesOrderStatus) => {
+      if (order && onUpdateStatus) {
+         onUpdateStatus(order.id, newStatus);
+         setFormData({ ...formData, status: newStatus });
+      }
+   };
+
+   return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/60 backdrop-blur-sm">
+         <div className="bg-white rounded-[2rem] shadow-2xl p-6 md:p-8 border border-gray-100 max-w-2xl w-full animate-in fade-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+               <div>
+                  <h3 className="text-2xl font-display font-bold text-gray-900">
+                     {order ? 'Edit Sales Order' : 'Create Sales Order'}
+                  </h3>
+                  {order && (
+                     <p className="text-sm text-gray-500 mt-1">Order ID: {order.id}</p>
+                  )}
+               </div>
+               <button onClick={onClose} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors">
+                  <X size={20} className="text-gray-500" />
+               </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+               {/* Customer */}
+               <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                     Customer Name
+                  </label>
+                  <input
+                     type="text"
+                     required
+                     value={formData.customer}
+                     onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
+                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                     placeholder="Enter customer name"
+                  />
+               </div>
+
+               {/* Date */}
+               <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                     Order Date
+                  </label>
+                  <input
+                     type="date"
+                     required
+                     value={formData.date}
+                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                  />
+               </div>
+
+               {/* Total Amount */}
+               <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                     Total Amount ($)
+                  </label>
+                  <input
+                     type="number"
+                     required
+                     min="0"
+                     step="0.01"
+                     value={formData.totalAmount}
+                     onChange={(e) => setFormData({ ...formData, totalAmount: parseFloat(e.target.value) })}
+                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                     placeholder="0.00"
+                  />
+               </div>
+
+               {/* Fulfillment Location */}
+               <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                     Fulfillment Location
+                  </label>
+                  <select
+                     value={formData.fulfillmentLocation}
+                     onChange={(e) => setFormData({ ...formData, fulfillmentLocation: e.target.value })}
+                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                  >
+                     <option value="US-East WH (Secure)">US-East WH (Secure)</option>
+                     <option value="Nevada Depot">Nevada Depot</option>
+                     <option value="EU Distribution Center">EU Distribution Center</option>
+                     <option value="APAC Hub">APAC Hub</option>
+                  </select>
+               </div>
+
+               {/* Backordered Items */}
+               <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                     Backordered Items
+                  </label>
+                  <input
+                     type="number"
+                     min="0"
+                     value={formData.backorderedItems}
+                     onChange={(e) => setFormData({ ...formData, backorderedItems: parseInt(e.target.value) })}
+                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                  />
+               </div>
+
+               {/* Status (for editing only) */}
+               {order && onUpdateStatus && (
+                  <div>
+                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                        Order Status
+                     </label>
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        {Object.values(SalesOrderStatus).map((status) => (
+                           <button
+                              key={status}
+                              type="button"
+                              onClick={() => handleStatusChange(status)}
+                              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${formData.status === status
+                                 ? 'bg-black text-white shadow-key'
+                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                 }`}
+                           >
+                              {status}
+                           </button>
+                        ))}
+                     </div>
+                  </div>
+               )}
+
+               {/* Actions */}
+               <div className="flex gap-3 pt-4">
+                  <button
+                     type="submit"
+                     className="flex-1 py-3.5 bg-black text-white rounded-2xl font-bold shadow-key hover:bg-gray-800 transition-colors"
+                  >
+                     {order ? 'Update Order' : 'Create Order'}
+                  </button>
+                  <button
+                     type="button"
+                     onClick={onClose}
+                     className="flex-1 py-3.5 bg-gray-50 text-gray-900 rounded-2xl font-bold hover:bg-gray-100 transition-colors"
+                  >
+                     Cancel
+                  </button>
+               </div>
+            </form>
+         </div>
       </div>
    );
 };

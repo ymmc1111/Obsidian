@@ -7,6 +7,8 @@ This document outlines all the core functions users should be able to perform in
 🚧 In Progress - Feature is partially implemented (e.g., backend complete, UI pending)
 📋 Planned - Feature is designed but not yet implemented
 
+---
+
 ## 🚀 Implementation Phases
 
 ### Phase 1: Planning View CRUD (Using Firestore) - COMPLETED
@@ -30,8 +32,7 @@ This document outlines all the core functions users should be able to perform in
   ✅ `addInventoryItem()`, `updateInventoryItem()` are functional on Firestore.
 - **Frontend:** Implement CRUD UI in `InventoryView`  
   ✅ Modal form for Add/Edit, including status and location updates, is implemented with Toast notifications.
-- **Migrate to Firestore**  
-  ✅ Inventory data moved to Firestore for real‑time updates and history tracking.
+- **Migrate to Firestore** ✅ Inventory data moved to Firestore for real‑time updates and history tracking.
 
 **Expected Outcome:** Users can fully manage inventory with persistent storage and audit trails.
 
@@ -66,6 +67,8 @@ This document outlines all the core functions users should be able to perform in
   ✅ Backup/Restore and Health Monitor implemented.
 
 **Expected Outcome:** A fully featured ERP with closed-loop workflows and robust reporting.
+
+---
 
 ## Modules & Functions
 
@@ -138,10 +141,10 @@ This document outlines all the core functions users should be able to perform in
 | Function | Status | User Roles | Action | Goal |
 |---|---|---|---|---|
 | View Sales Orders | ✅ | All | Browse all customer orders with status | Monitor order fulfillment |
-| Create Sales Order | 📋 | Admin, Logistics Specialist | Input customer, items, delivery date | Initiate order fulfillment |
-| Update Order Status | 📋 | Logistics Specialist | Change status (Processing → Shipped → Delivered) | Track order progress |
+| Create Sales Order | ✅ | Admin, Logistics Specialist | Input customer, items, delivery date | Initiate order fulfillment |
+| Update Order Status | ✅ | Logistics Specialist | Change status (Processing → Shipped → Delivered) | Track order progress |
 | View Backorders | ✅ | All | See items on backorder across all orders | Prioritize production or procurement |
-| Allocate Inventory | 📋 | Logistics Specialist | Reserve inventory for specific order | Prevent overselling |
+| Allocate Inventory | ✅ | Logistics Specialist | Reserve inventory for specific order | Prevent overselling |
 | Generate Packing List | ✅ | Logistics Specialist | Create shipping documentation | Prepare for shipment |
 | View Facility Map | ✅ | All | See warehouse layout and zones | Navigate physical space |
 | Optimize Routes | ✅ | Logistics Specialist | Calculate optimal picking/shipping routes | Improve efficiency |

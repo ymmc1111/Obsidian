@@ -1,6 +1,10 @@
 
 import { DatabaseSchema } from './schema';
-import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_LOGS } from '../mockData';
+import {
+  INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_LOGS,
+  INITIAL_FINANCIAL_KPIS, INITIAL_INVOICES, INITIAL_OEE_DATA,
+  INITIAL_SCHEDULES, INITIAL_CALIBRATIONS
+} from '../mockData';
 
 // Initialize the "PostgreSQL" Mock Database
 // This acts as the Single Source of Truth for the Backend Layer
@@ -20,7 +24,7 @@ const initializeDB = (): DatabaseSchema => {
       cageCode: item.cageCode,
       serialNumber: item.serialNumber
     })),
-    
+
     tbl_traveler: [{
       id: MOCK_TRAVELER.id,
       partNumber: MOCK_TRAVELER.partNumber,
@@ -50,7 +54,14 @@ const initializeDB = (): DatabaseSchema => {
     })),
 
     tbl_telemetry_traces: [],
-    tbl_telemetry_metrics: []
+    tbl_telemetry_metrics: [],
+
+    // Phase 2 Expansions
+    tbl_financial_kpis: INITIAL_FINANCIAL_KPIS,
+    tbl_invoices: INITIAL_INVOICES,
+    tbl_oee: INITIAL_OEE_DATA,
+    tbl_schedules: INITIAL_SCHEDULES,
+    tbl_calibrations: INITIAL_CALIBRATIONS
   };
 };
 

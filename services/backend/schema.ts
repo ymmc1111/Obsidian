@@ -1,5 +1,8 @@
 
-import { ItemStatus, SensitivityLevel } from '../types';
+import {
+  ItemStatus, SensitivityLevel, FinancialKPI, Invoice,
+  OEEData, ProductionSchedule, CalibrationRecord
+} from '../../types';
 
 // Core Data Schema (PostgreSQL Mock)
 
@@ -68,4 +71,11 @@ export interface DatabaseSchema {
   tbl_audit_log: TblAuditLog[];
   tbl_telemetry_traces: TblTelemetryTrace[];
   tbl_telemetry_metrics: TblTelemetryMetric[];
+
+  // Phase 2
+  tbl_financial_kpis: FinancialKPI[];
+  tbl_invoices: Invoice[];
+  tbl_oee: OEEData[];
+  tbl_schedules: ProductionSchedule[];
+  tbl_calibrations: CalibrationRecord[];
 }

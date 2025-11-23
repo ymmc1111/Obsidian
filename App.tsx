@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-  LayoutGrid, 
-  Box, 
-  Factory, 
-  LogOut, 
+import {
+  LayoutGrid,
+  Box,
+  Factory,
+  LogOut,
   Activity,
   DollarSign,
   ClipboardList,
@@ -30,11 +30,11 @@ import { LogisticsView } from './components/LogisticsView';
 import { TraceView } from './components/TraceView';
 import { ShopFloorView } from './components/ShopFloorView';
 import { Login } from './components/Login';
-import { INITIAL_INVENTORY, MOCK_TRAVELER } from './services/mockData';
+import { BackendAPI } from './services/backend/api';
 import { auditService } from './services/auditService';
 import { telemetryService } from './services/telemetryService';
 import { monitoringService } from './services/monitoringService';
-import { ComplianceMode, UserRole, AuditLogEntry } from './types';
+import { ComplianceMode, UserRole, AuditLogEntry, InventoryItem, ProductionRun } from './types';
 
 enum View {
   DASHBOARD,
@@ -56,8 +56,14 @@ const App: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeComplianceMode, setActiveComplianceMode] = useState<ComplianceMode>(ComplianceMode.DEFENCE);
+
   const [systemLogs, setSystemLogs] = useState<AuditLogEntry[]>([]);
-  
+
+  // Data State (Decoupled from Mock)
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [traveler, setTraveler] = useState<ProductionRun | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   // Demo State: Mock User Role for Shop Floor Security
   const [currentUserRole, setCurrentUserRole] = useState<UserRole>(UserRole.PRODUCTION_OPERATOR);
 
@@ -69,18 +75,40 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  // Initial Data Fetch (Phase 1: Decoupling)
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [invData, travData] = await Promise.all([
+          BackendAPI.getInventory(),
+          BackendAPI.getActiveTraveler()
+        ]);
+        setInventory(invData);
+        setTraveler(travData);
+      } catch (err) {
+        console.error("Failed to load system data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated]);
+
   // Initialize System Health Monitoring
   useEffect(() => {
     if (isAuthenticated) {
-        // Run initial check
+      // Run initial check
+      monitoringService.runHealthChecks();
+
+      // Establish periodic watchdog (every 60s)
+      const intervalId = setInterval(() => {
         monitoringService.runHealthChecks();
+      }, 60000);
 
-        // Establish periodic watchdog (every 60s)
-        const intervalId = setInterval(() => {
-            monitoringService.runHealthChecks();
-        }, 60000);
-
-        return () => clearInterval(intervalId);
+      return () => clearInterval(intervalId);
     }
   }, [isAuthenticated]);
 
@@ -107,10 +135,10 @@ const App: React.FC = () => {
   // Demo: Cycle roles on profile click
   const cycleRole = () => {
     const roles = [
-        UserRole.PRODUCTION_OPERATOR,
-        UserRole.QUALITY_INSPECTOR,
-        UserRole.LOGISTICS_SPECIALIST,
-        UserRole.ADMIN
+      UserRole.PRODUCTION_OPERATOR,
+      UserRole.QUALITY_INSPECTOR,
+      UserRole.LOGISTICS_SPECIALIST,
+      UserRole.ADMIN
     ];
     const currentIndex = roles.indexOf(currentUserRole);
     const nextRole = roles[(currentIndex + 1) % roles.length];
@@ -122,30 +150,41 @@ const App: React.FC = () => {
     return <Login onLogin={handleLogin} />;
   }
 
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-ios-bg">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
+          <p className="font-display font-bold text-gray-500 animate-pulse">Initializing Secure Environment...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen w-screen bg-ios-bg text-ios-text overflow-hidden font-sans">
-      
+
       {/* Mobile Header (Visible only on small screens) */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-ios-bg z-40 flex items-center justify-between px-4 border-b border-gray-200">
-         <div className="flex items-center gap-3">
-            <button 
-                onClick={() => setMobileMenuOpen(true)}
-                className="p-2 -ml-2 rounded-xl text-gray-700 hover:bg-white/50"
-            >
-                <Menu size={24} />
-            </button>
-            <span className="font-display font-bold text-lg">PocketOps</span>
-         </div>
-         <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold">
-            {currentUserRole === UserRole.ADMIN ? 'AD' : 'OP'}
-         </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-2 -ml-2 rounded-xl text-gray-700 hover:bg-white/50"
+          >
+            <Menu size={24} />
+          </button>
+          <span className="font-display font-bold text-lg">PocketOps</span>
+        </div>
+        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold">
+          {currentUserRole === UserRole.ADMIN ? 'AD' : 'OP'}
+        </div>
       </div>
 
       {/* Mobile Overlay */}
       {mobileMenuOpen && (
-        <div 
-            className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm lg:hidden animate-in fade-in"
-            onClick={() => setMobileMenuOpen(false)}
+        <div
+          className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm lg:hidden animate-in fade-in"
+          onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
@@ -159,7 +198,7 @@ const App: React.FC = () => {
       `}>
         {/* Logo Area (Hidden on Mobile as we have header) */}
         <div className="h-12 mb-8 items-center px-2 hidden lg:flex">
-          <button 
+          <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className="flex items-center gap-3 group outline-none"
           >
@@ -177,102 +216,102 @@ const App: React.FC = () => {
 
         {/* Mobile Sidebar Header */}
         <div className="lg:hidden h-12 mb-6 flex items-center justify-between px-2">
-            <span className="font-display font-bold text-xl">Menu</span>
-            <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-xl bg-gray-100 text-gray-600">
-                <X size={20} />
-            </button>
+          <span className="font-display font-bold text-xl">Menu</span>
+          <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-xl bg-gray-100 text-gray-600">
+            <X size={20} />
+          </button>
         </div>
 
         {/* Navigation "Keys" */}
         <nav className="flex-1 space-y-2 overflow-y-auto no-scrollbar pb-6 lg:pb-0">
-          <NavButton 
-            icon={Tractor} 
-            label="Shop Floor Mode" 
-            active={currentView === View.SHOP_FLOOR} 
-            onClick={() => handleViewChange(View.SHOP_FLOOR)} 
+          <NavButton
+            icon={Tractor}
+            label="Shop Floor Mode"
+            active={currentView === View.SHOP_FLOOR}
+            onClick={() => handleViewChange(View.SHOP_FLOOR)}
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
-          <NavButton 
-            icon={LayoutGrid} 
-            label="Overview" 
-            active={currentView === View.DASHBOARD} 
-            onClick={() => handleViewChange(View.DASHBOARD)} 
+          <NavButton
+            icon={LayoutGrid}
+            label="Overview"
+            active={currentView === View.DASHBOARD}
+            onClick={() => handleViewChange(View.DASHBOARD)}
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
-          <NavButton 
-            icon={Box} 
-            label="Inventory" 
-            active={currentView === View.INVENTORY} 
-            onClick={() => handleViewChange(View.INVENTORY)} 
+          <NavButton
+            icon={Box}
+            label="Inventory"
+            active={currentView === View.INVENTORY}
+            onClick={() => handleViewChange(View.INVENTORY)}
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
-          <NavButton 
-            icon={Target} 
-            label="Traceability" 
-            active={currentView === View.TRACEABILITY} 
-            onClick={() => handleViewChange(View.TRACEABILITY)} 
+          <NavButton
+            icon={Target}
+            label="Traceability"
+            active={currentView === View.TRACEABILITY}
+            onClick={() => handleViewChange(View.TRACEABILITY)}
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
-          <NavButton 
-            icon={Factory} 
-            label="Production" 
-            active={currentView === View.MANUFACTURING} 
-            onClick={() => handleViewChange(View.MANUFACTURING)} 
-            collapsed={sidebarCollapsed && !mobileMenuOpen}
-          />
-          <div className="h-px bg-gray-200 mx-4 my-2" />
-          <NavButton 
-            icon={ClipboardList} 
-            label="Procurement" 
-            active={currentView === View.PROCUREMENT} 
-            onClick={() => handleViewChange(View.PROCUREMENT)} 
-            collapsed={sidebarCollapsed && !mobileMenuOpen}
-          />
-          <NavButton 
-            icon={Truck} 
-            label="Orders" 
-            active={currentView === View.ORDERS} 
-            onClick={() => handleViewChange(View.ORDERS)} 
-            collapsed={sidebarCollapsed && !mobileMenuOpen}
-          />
-          <NavButton 
-            icon={DollarSign} 
-            label="Finance" 
-            active={currentView === View.FINANCE} 
-            onClick={() => handleViewChange(View.FINANCE)} 
-            collapsed={sidebarCollapsed && !mobileMenuOpen}
-          />
-          <NavButton 
-            icon={CalendarCheck} 
-            label="Production Planning" 
-            active={currentView === View.PLANNING} 
-            onClick={() => handleViewChange(View.PLANNING)} 
-            collapsed={sidebarCollapsed && !mobileMenuOpen}
-          />
-           <NavButton 
-            icon={Map} 
-            label="Logistics & Facilities" 
-            active={currentView === View.LOGISTICS} 
-            onClick={() => handleViewChange(View.LOGISTICS)} 
+          <NavButton
+            icon={Factory}
+            label="Production"
+            active={currentView === View.MANUFACTURING}
+            onClick={() => handleViewChange(View.MANUFACTURING)}
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
           <div className="h-px bg-gray-200 mx-4 my-2" />
-          <NavButton 
-            icon={Users} 
-            label="Admin" 
-            active={currentView === View.ADMIN} 
-            onClick={() => handleViewChange(View.ADMIN)} 
+          <NavButton
+            icon={ClipboardList}
+            label="Procurement"
+            active={currentView === View.PROCUREMENT}
+            onClick={() => handleViewChange(View.PROCUREMENT)}
+            collapsed={sidebarCollapsed && !mobileMenuOpen}
+          />
+          <NavButton
+            icon={Truck}
+            label="Orders"
+            active={currentView === View.ORDERS}
+            onClick={() => handleViewChange(View.ORDERS)}
+            collapsed={sidebarCollapsed && !mobileMenuOpen}
+          />
+          <NavButton
+            icon={DollarSign}
+            label="Finance"
+            active={currentView === View.FINANCE}
+            onClick={() => handleViewChange(View.FINANCE)}
+            collapsed={sidebarCollapsed && !mobileMenuOpen}
+          />
+          <NavButton
+            icon={CalendarCheck}
+            label="Production Planning"
+            active={currentView === View.PLANNING}
+            onClick={() => handleViewChange(View.PLANNING)}
+            collapsed={sidebarCollapsed && !mobileMenuOpen}
+          />
+          <NavButton
+            icon={Map}
+            label="Logistics & Facilities"
+            active={currentView === View.LOGISTICS}
+            onClick={() => handleViewChange(View.LOGISTICS)}
+            collapsed={sidebarCollapsed && !mobileMenuOpen}
+          />
+          <div className="h-px bg-gray-200 mx-4 my-2" />
+          <NavButton
+            icon={Users}
+            label="Admin"
+            active={currentView === View.ADMIN}
+            onClick={() => handleViewChange(View.ADMIN)}
             collapsed={sidebarCollapsed && !mobileMenuOpen}
           />
         </nav>
 
         {/* User Profile "Key" */}
         <div className="mt-auto pt-4 lg:block hidden">
-           {!sidebarCollapsed ? (
-            <div 
-                className="bg-white rounded-2xl p-4 shadow-key border border-white/50 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={cycleRole}
-                title="Click to cycle User Role (Demo)"
+          {!sidebarCollapsed ? (
+            <div
+              className="bg-white rounded-2xl p-4 shadow-key border border-white/50 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={cycleRole}
+              title="Click to cycle User Role (Demo)"
             >
               <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-800">
                 {currentUserRole === UserRole.ADMIN ? 'AD' : 'OP'}
@@ -285,26 +324,26 @@ const App: React.FC = () => {
                 <LogOut size={18} />
               </button>
             </div>
-           ) : (
-             <button onClick={() => setIsAuthenticated(false)} className="w-12 h-12 rounded-2xl bg-white shadow-key flex items-center justify-center text-gray-400 hover:text-red-500">
-                <LogOut size={20} />
-             </button>
-           )}
+          ) : (
+            <button onClick={() => setIsAuthenticated(false)} className="w-12 h-12 rounded-2xl bg-white shadow-key flex items-center justify-center text-gray-400 hover:text-red-500">
+              <LogOut size={20} />
+            </button>
+          )}
         </div>
-        
+
         {/* Mobile Logout Button */}
         <div className="mt-auto pt-4 lg:hidden">
-             <button onClick={() => setIsAuthenticated(false)} className="w-full flex items-center gap-3 p-4 rounded-2xl bg-red-50 text-red-600 font-bold">
-                <LogOut size={20} />
-                <span>Log Out</span>
-             </button>
+          <button onClick={() => setIsAuthenticated(false)} className="w-full flex items-center gap-3 p-4 rounded-2xl bg-red-50 text-red-600 font-bold">
+            <LogOut size={20} />
+            <span>Log Out</span>
+          </button>
         </div>
       </aside>
 
       {/* Main Stage */}
       <main className="flex-1 h-full pt-16 lg:pt-4 lg:p-4 lg:pl-0 relative overflow-hidden">
         <div className="h-full w-full bg-white lg:rounded-[2.5rem] lg:shadow-soft overflow-hidden relative flex flex-col border-t lg:border border-white/60">
-          
+
           {/* Header inside the main surface (Desktop only mostly, or simplified on mobile) */}
           <header className="h-16 md:h-20 flex items-center justify-between px-4 md:px-8 border-b border-gray-100 shrink-0 bg-white sticky top-0 z-10">
             <div>
@@ -332,17 +371,17 @@ const App: React.FC = () => {
 
           {/* Content Area */}
           <div className="flex-1 overflow-auto bg-white relative">
-             {currentView === View.DASHBOARD && <Dashboard complianceMode={activeComplianceMode} />}
-             {currentView === View.INVENTORY && <InventoryView items={INITIAL_INVENTORY} />}
-             {currentView === View.SHOP_FLOOR && <ShopFloorView userRole={currentUserRole} traveler={MOCK_TRAVELER} />}
-             {currentView === View.TRACEABILITY && <TraceView />}
-             {currentView === View.MANUFACTURING && <TravelerView traveler={MOCK_TRAVELER} complianceMode={activeComplianceMode} />}
-             {currentView === View.PROCUREMENT && <ProcurementView />}
-             {currentView === View.FINANCE && <FinanceView complianceMode={activeComplianceMode} />}
-             {currentView === View.ORDERS && <OrdersView complianceMode={activeComplianceMode} />}
-             {currentView === View.PLANNING && <PlanningView complianceMode={activeComplianceMode} />}
-             {currentView === View.LOGISTICS && <LogisticsView complianceMode={activeComplianceMode} />}
-             {currentView === View.ADMIN && <AdminView activeMode={activeComplianceMode} setMode={setActiveComplianceMode} />}
+            {currentView === View.DASHBOARD && <Dashboard complianceMode={activeComplianceMode} />}
+            {currentView === View.INVENTORY && <InventoryView items={inventory} />}
+            {currentView === View.SHOP_FLOOR && traveler && <ShopFloorView userRole={currentUserRole} traveler={traveler} />}
+            {currentView === View.TRACEABILITY && <TraceView />}
+            {currentView === View.MANUFACTURING && traveler && <TravelerView traveler={traveler} complianceMode={activeComplianceMode} />}
+            {currentView === View.PROCUREMENT && <ProcurementView />}
+            {currentView === View.FINANCE && <FinanceView complianceMode={activeComplianceMode} />}
+            {currentView === View.ORDERS && <OrdersView complianceMode={activeComplianceMode} />}
+            {currentView === View.PLANNING && <PlanningView complianceMode={activeComplianceMode} />}
+            {currentView === View.LOGISTICS && <LogisticsView complianceMode={activeComplianceMode} />}
+            {currentView === View.ADMIN && <AdminView activeMode={activeComplianceMode} setMode={setActiveComplianceMode} />}
           </div>
 
           {/* Live Audit Ticker (Bottom) */}
@@ -352,11 +391,11 @@ const App: React.FC = () => {
             </div>
             <div className="flex items-center gap-4 md:gap-8 overflow-hidden marquee-mask">
               {systemLogs.map((log, i) => (
-                 <div key={i} className="flex items-center gap-2 text-[10px] md:text-xs font-mono text-gray-500 whitespace-nowrap opacity-60">
-                    <span className="text-gray-300">|</span>
-                    <span>{log.timestamp.split('T')[1].substring(0,5)}</span>
-                    <span className="font-medium text-gray-700 truncate max-w-[150px]">{log.action}</span>
-                 </div>
+                <div key={i} className="flex items-center gap-2 text-[10px] md:text-xs font-mono text-gray-500 whitespace-nowrap opacity-60">
+                  <span className="text-gray-300">|</span>
+                  <span>{log.timestamp.split('T')[1].substring(0, 5)}</span>
+                  <span className="font-medium text-gray-700 truncate max-w-[150px]">{log.action}</span>
+                </div>
               ))}
             </div>
           </div>

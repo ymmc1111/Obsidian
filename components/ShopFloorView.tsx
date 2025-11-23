@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ProductionRun, UserRole, TravelerStep } from '../types';
-import { Check, AlertTriangle, Search, ArrowRight, ShieldCheck, Fingerprint, Box } from 'lucide-react';
-import { TacticalCard } from './Shared';
+import { Check, AlertTriangle, Search, ArrowRight, ShieldCheck, Fingerprint, Box, Pause, Play, Paperclip, X } from 'lucide-react';
+import { TacticalCard, Toast } from './Shared';
 import { auditService } from '../services/auditService';
 import { telemetryService } from '../services/telemetryService';
 import { db } from '../services/backend/db'; // Import mock DB to mutate state
@@ -18,6 +18,12 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
 
     const currentStep = currentTraveler.steps.find(s => s.order === activeStepIndex + 1);
     const [isSigning, setIsSigning] = useState(false);
+    const [attachments, setAttachments] = useState<string[]>([]);
+    const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+    const showToast = (message: string, type: 'success' | 'error') => {
+        setToast({ message, type });
+    };
 
     // Check if current user role matches required role
     const isRoleAuthorized = currentStep && currentStep.requiredRole.toLowerCase().includes(userRole.split(' ')[0].toLowerCase());
@@ -38,7 +44,7 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
         auditService.logAction(
             `${userRole} (Term-800)`,
             'TRAVELER_STEP_COMPLETE',
-            `Step ${currentStep.id} verified from Shop Floor Terminal by ${userRole}.`
+            `Step ${currentStep.id} verified from Shop Floor Terminal by ${userRole}. Attachments: ${attachments.length}`
         );
 
         setTimeout(() => {
@@ -64,17 +70,22 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
                 currentStep.completed = true;
                 currentStep.completedBy = userRole;
                 currentStep.timestamp = new Date().toISOString();
+                currentStep.attachments = [...attachments]; // Save attachments
             }
 
             // 2. Advance step in UI state
             const nextStepIndex = activeStepIndex + 1;
             if (nextStepIndex < currentTraveler.steps.length) {
                 setActiveStepIndex(nextStepIndex);
+                showToast("Step verified successfully.", 'success');
             } else {
                 // Update traveler status to COMPLETED in mock DB
                 if (travelerInDb) travelerInDb.status = 'COMPLETED';
-                alert("Job Complete. Traveler closed and final data logged.");
+                showToast("Job Complete. Traveler closed and final data logged.", 'success');
             }
+
+            // Reset attachments for next step
+            setAttachments([]);
 
             telemetryService.endSpan(span);
         }, 1500);
@@ -88,7 +99,36 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
             'CAPA_INITIATED',
             `Deviation reported from Shop Floor. ID: ${capaId} on step ${currentStep?.id}.`
         );
-        alert(`CAPA Workflow Initiated (${capaId}). QA Protocol Active. Check Traceability View.`);
+        showToast(`CAPA Workflow Initiated (${capaId}). QA Protocol Active.`, 'error');
+    };
+
+    const handlePauseResume = () => {
+        const newStatus = currentTraveler.status === 'HALTED' ? 'IN_PROGRESS' : 'HALTED';
+        setCurrentTraveler({ ...currentTraveler, status: newStatus });
+
+        // Log action
+        auditService.logAction(
+            `${userRole} (Term-800)`,
+            newStatus === 'HALTED' ? 'PRODUCTION_PAUSED' : 'PRODUCTION_RESUMED',
+            `Production run ${currentTraveler.id} ${newStatus === 'HALTED' ? 'paused' : 'resumed'} by ${userRole}.`
+        );
+
+        showToast(`Production ${newStatus === 'HALTED' ? 'Paused' : 'Resumed'}`, 'success');
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            // Mock upload - just storing name
+            setAttachments([...attachments, file.name]);
+            showToast(`Attached: ${file.name}`, 'success');
+        }
+    };
+
+    const removeAttachment = (index: number) => {
+        const newAttachments = [...attachments];
+        newAttachments.splice(index, 1);
+        setAttachments(newAttachments);
     };
 
     return (
@@ -100,7 +140,14 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
                     <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Active Job</p>
                     <h1 className="text-4xl font-display font-bold text-gray-900">{traveler.partNumber}</h1>
                 </div>
-                <div className="text-right">
+                <div className="text-right flex items-center gap-4">
+                    <button
+                        onClick={handlePauseResume}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold transition-colors ${currentTraveler.status === 'HALTED' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'}`}
+                    >
+                        {currentTraveler.status === 'HALTED' ? <Play size={18} fill="currentColor" /> : <Pause size={18} fill="currentColor" />}
+                        {currentTraveler.status === 'HALTED' ? 'RESUME JOB' : 'PAUSE JOB'}
+                    </button>
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
                         <Fingerprint size={16} className="text-gray-500" />
                         <span className="text-sm font-bold text-gray-600 uppercase tracking-wide">{userRole}</span>
@@ -125,9 +172,27 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
                         </p>
                     )}
                     {currentStep && (
-                        <p className="text-sm font-bold uppercase tracking-wide text-gray-600">
-                            Required Role: <span className={isRoleAuthorized ? 'text-green-600' : 'text-red-500'}>{currentStep.requiredRole}</span>
-                        </p>
+                        <div className="flex flex-col items-center gap-2">
+                            <p className="text-sm font-bold uppercase tracking-wide text-gray-600">
+                                Required Role: <span className={isRoleAuthorized ? 'text-green-600' : 'text-red-500'}>{currentStep.requiredRole}</span>
+                            </p>
+
+                            {/* Attachment Area */}
+                            <div className="mt-4 flex flex-wrap justify-center gap-2">
+                                {attachments.map((file, idx) => (
+                                    <div key={idx} className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg text-xs font-medium text-gray-700">
+                                        <Paperclip size={12} />
+                                        {file}
+                                        <button onClick={() => removeAttachment(idx)} className="hover:text-red-500"><X size={12} /></button>
+                                    </div>
+                                ))}
+                                <label className="cursor-pointer flex items-center gap-2 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-bold transition-colors">
+                                    <Paperclip size={12} />
+                                    Attach Evidence
+                                    <input type="file" className="hidden" onChange={handleFileUpload} />
+                                </label>
+                            </div>
+                        </div>
                     )}
                 </div>
 
@@ -137,13 +202,13 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
                     {/* Primary Action (A. Step Sign-Off) */}
                     <button
                         onClick={handleVerifySign}
-                        disabled={isSigning || isJobComplete || !isRoleAuthorized}
+                        disabled={isSigning || isJobComplete || !isRoleAuthorized || currentTraveler.status === 'HALTED'}
                         className={`
                         col-span-1 md:col-span-2
                         h-32 rounded-[2.5rem] text-white 
                         flex items-center justify-center gap-4 
                         shadow-2xl transition-all
-                        ${isJobComplete || !isRoleAuthorized ? 'bg-gray-400 opacity-80 cursor-not-allowed' : 'bg-black hover:scale-[1.02] active:scale-95'}
+                        ${isJobComplete || !isRoleAuthorized || currentTraveler.status === 'HALTED' ? 'bg-gray-400 opacity-80 cursor-not-allowed' : 'bg-black hover:scale-[1.02] active:scale-95'}
                     `}
                     >
                         {isSigning ? (
@@ -196,6 +261,9 @@ export const ShopFloorView: React.FC<ShopFloorViewProps> = ({ userRole, traveler
                 <span>Terminal ID: T-800</span>
                 <span>Uptime: 4d 12h</span>
             </div>
+
+            {/* Toast Notification */}
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
         </div>
     );

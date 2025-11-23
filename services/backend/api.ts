@@ -2,6 +2,7 @@ import { db } from './db';
 import { AuditLogEntry, InvoiceStatus, SystemUser, ProductionSchedule, InventoryItem, ItemStatus, SensitivityLevel, CalibrationRecord, Vendor, PurchaseOrder, PurchaseOrderStatus } from '../../types.ts';
 import { MOCK_TRAVELER, INITIAL_USERS } from '../mockData.ts';
 import { initializeFirebase, subscribeToSchedules, addProductionSchedule, updateProductionSchedule, deleteProductionSchedule, getCalibrations } from '../firebaseProductionService.ts';
+import { subscribeToInventory, addInventoryItem as addInv, updateInventoryItem as updateInv, getInventory as getInv } from '../firebaseInventoryService.ts';
 
 // Initialize Firebase Auth/DB connection immediately
 initializeFirebase().then(userId => {
@@ -163,47 +164,35 @@ export const BackendAPI = {
 
   // Endpoint: GET /api/v1/inventory/all
   getInventory: async () => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return db.tbl_inventory.map(BackendAPI._mapDbToInventoryItem);
+    // Use Firestore Service
+    return getInv();
   },
 
   // Endpoint: GET /api/v1/inventory/search
   searchInventory: async (query: string) => {
-    // Simulate network delay and "Slow Query" occasionally
+    // Simulate network delay
     const latency = Math.random() > 0.9 ? 800 : 100;
     await new Promise(resolve => setTimeout(resolve, latency));
 
+    // Fetch all from Firestore (inefficient for large DBs, but fine for this scale)
+    const allItems = await getInv();
     const lowerQuery = query.toLowerCase();
-    const results = db.tbl_inventory.filter(item =>
+
+    const results = allItems.filter(item =>
       item.partNumber.toLowerCase().includes(lowerQuery) ||
       item.nomenclature.toLowerCase().includes(lowerQuery)
     );
 
     return {
-      results: results.map(BackendAPI._mapDbToInventoryItem),
+      results,
       latency_ms: latency
     };
   },
 
   // Endpoint: POST /api/v1/inventory/add (Phase 2: Add New Asset)
   addInventoryItem: async (itemData: Omit<InventoryItem, 'id'>, actor?: SystemUser | null): Promise<InventoryItem> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const newId = `INV-${Date.now()}`;
-    const newDbItem = {
-      id: newId,
-      partNumber: itemData.partNumber,
-      quantity: itemData.quantity,
-      location: itemData.location,
-      batchLot: itemData.batchLot,
-      unitCost: itemData.unitCost,
-      cui_sensitive: itemData.sensitivity === 'CUI' || itemData.sensitivity === 'SECRET',
-      status: itemData.status || ItemStatus.AVAILABLE,
-      nomenclature: itemData.nomenclature,
-      cageCode: itemData.cageCode || 'N/A',
-      serialNumber: itemData.serialNumber || 'N/A'
-    };
-    db.tbl_inventory.unshift(newDbItem);
+    // Add to Firestore
+    const newId = await addInv(itemData);
 
     // Log the receiving action
     BackendAPI.ingestAuditLog({
@@ -214,52 +203,30 @@ export const BackendAPI = {
       hash: '0xmockhash'
     });
 
-    return BackendAPI._mapDbToInventoryItem(newDbItem);
+    // Return the item with the new ID
+    return { id: newId, ...itemData } as InventoryItem;
   },
 
   // Endpoint: PATCH /api/v1/inventory/:id (Phase 2: Update Item)
-  updateInventoryItem: async (id: string, updates: Partial<InventoryItem>, actor?: SystemUser | null): Promise<InventoryItem> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const index = db.tbl_inventory.findIndex(i => i.id === id);
-
-    if (index === -1) throw new Error("Inventory item not found.");
-
-    let logMessage = `Updated item ${id}.`;
-    const originalItem = db.tbl_inventory[index];
-
-    // Track changes for audit log
-    if (updates.location && updates.location !== originalItem.location) {
-      logMessage += ` Location changed from ${originalItem.location} to ${updates.location}.`;
-      originalItem.location = updates.location;
-    }
-    if (updates.status && updates.status !== originalItem.status) {
-      logMessage += ` Status changed from ${originalItem.status} to ${updates.status}.`;
-      originalItem.status = updates.status;
-    }
-    if (updates.quantity !== undefined && updates.quantity !== originalItem.quantity) {
-      logMessage += ` Quantity adjusted from ${originalItem.quantity} to ${updates.quantity}.`;
-      originalItem.quantity = updates.quantity;
-    }
-
-    // Apply all updates
-    db.tbl_inventory[index] = {
-      ...originalItem,
-      ...updates,
-      cui_sensitive: updates.sensitivity
-        ? updates.sensitivity === 'CUI' || updates.sensitivity === 'SECRET'
-        : originalItem.cui_sensitive
-    };
+  updateInventoryItem: async (id: string, updates: Partial<InventoryItem>, actor?: SystemUser | null): Promise<void> => {
+    // Update in Firestore
+    await updateInv(id, updates);
 
     // Log the update action
     BackendAPI.ingestAuditLog({
       timestamp: new Date().toISOString(),
       actor: getActor(actor),
       action: 'INVENTORY_UPDATE',
-      details: logMessage,
+      details: `Updated item ${id}.`,
       hash: '0xmockhash'
     });
+  },
 
-    return BackendAPI._mapDbToInventoryItem(db.tbl_inventory[index]);
+  // Subscribe to Inventory (Real-time)
+  subscribeToInventory: (callback: (items: InventoryItem[]) => void) => {
+    return subscribeToInventory(callback, (e) => {
+      console.error("Firestore Inventory Subscription Error:", e);
+    });
   },
 
   // Endpoint: GET /api/v1/production/traveler/active
@@ -445,6 +412,43 @@ export const BackendAPI = {
     });
 
     return newPO;
+  },
+
+  receivePurchaseOrder: async (poId: string, actor?: SystemUser | null): Promise<PurchaseOrder> => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const poIndex = db.tbl_purchase_orders.findIndex(p => p.id === poId);
+    if (poIndex === -1) throw new Error("PO not found");
+
+    const po = db.tbl_purchase_orders[poIndex];
+    po.status = PurchaseOrderStatus.FILLED;
+
+    // Simulate adding to inventory (mock)
+    po.items.forEach(item => {
+      db.tbl_inventory.unshift({
+        id: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        partNumber: item.partNumber,
+        nomenclature: "Received Item",
+        cageCode: "MOCK-CAGE",
+        serialNumber: `SN-${Date.now()}`,
+        location: "Receiving Dock",
+        quantity: item.qty,
+        unitCost: item.unitCost,
+        status: ItemStatus.AVAILABLE,
+        cui_sensitive: false,
+        batchLot: `LOT-${Date.now()}`,
+      });
+    });
+
+    BackendAPI.ingestAuditLog({
+      timestamp: new Date().toISOString(),
+      actor: getActor(actor),
+      action: 'PO_RECEIVED',
+      details: `Received goods for PO ${poId}. Inventory updated.`,
+      hash: '0xmockhash'
+    });
+
+    return po;
   },
 
   // --- Phase 2: Traceability ---

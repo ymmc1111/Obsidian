@@ -84,6 +84,7 @@ export interface TravelerStep {
   completedBy?: string;
   timestamp?: string;
   inputs?: { label: string; value: string; type: 'text' | 'number' | 'passfail' }[];
+  attachments?: string[]; // URLs or filenames of attached evidence
 }
 
 export interface ProductionRun {
@@ -159,15 +160,15 @@ export interface ProductionSchedule {
 }
 
 export interface CertificateOfConformance {
-    id: string;
-    salesOrderId: string;
-    partNumber: string;
-    quantityShipped: number;
-    finalInspectionStatus: 'Passed' | 'Failed';
-    digitalSignature: string; 
-    rawMaterialTrace: { item: string; lotNumber: string; vendorCage: string }[];
-    complianceStatement: string;
-    complianceMode: ComplianceMode;
+  id: string;
+  salesOrderId: string;
+  partNumber: string;
+  quantityShipped: number;
+  finalInspectionStatus: 'Passed' | 'Failed';
+  digitalSignature: string;
+  rawMaterialTrace: { item: string; lotNumber: string; vendorCage: string }[];
+  complianceStatement: string;
+  complianceMode: ComplianceMode;
 }
 
 export interface CAPAEntry {

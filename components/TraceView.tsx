@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { TacticalCard, StatusBadge } from './Shared.tsx';
-import { Search, Package, Factory, CheckCircle2, Truck, AlertTriangle, Target, ArrowRight } from 'lucide-react';
+import { TacticalCard, StatusBadge, Toast } from './Shared.tsx';
+import { Search, Package, Factory, CheckCircle2, Truck, AlertTriangle, Target, ArrowRight, History, X, AlertOctagon } from 'lucide-react';
 import { INITIAL_INVENTORY, MOCK_TRAVELER, INITIAL_ORDERS } from '../services/mockData.ts';
 import { auditService } from '../services/auditService.ts';
 import { BackendAPI } from '../services/backend/api.ts';
-import { UserRole } from '../types.ts';
+import { UserRole, AuditLogEntry } from '../types.ts';
 
 interface TraceViewProps {
     currentUserRole: UserRole; // Prop for RBAC
@@ -14,6 +14,22 @@ export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => {
     const [searchTerm, setSearchTerm] = useState('SN-2024-9901');
     const [traceResult, setTraceResult] = useState<boolean>(true);
     const [isRecalling, setIsRecalling] = useState(false);
+    const [showRecallModal, setShowRecallModal] = useState(false);
+    const [recallHistory, setRecallHistory] = useState<AuditLogEntry[]>([]);
+    const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+    const showToast = (message: string, type: 'success' | 'error') => {
+        setToast({ message, type });
+    };
+
+    // Subscribe to Audit Logs for Recall History
+    React.useEffect(() => {
+        const unsubscribe = auditService.subscribe((logs) => {
+            const recalls = logs.filter(log => log.action === 'RECALL_INITIATED');
+            setRecallHistory(recalls);
+        });
+        return () => unsubscribe();
+    }, []);
 
     // Authorization check for Recall (Traceability: B)
     const isRecallAuthorized = currentUserRole === UserRole.ADMIN || currentUserRole === UserRole.QUALITY_INSPECTOR;
@@ -23,16 +39,17 @@ export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => {
         setTraceResult(true);
     };
 
-    const handleRecall = async () => {
-        // Traceability: B. Initiate Precision Recall
+    const handleRecallClick = () => {
         if (!isRecallAuthorized) {
-            // Updated to use custom UI alert style if needed, or simply let the browser alert fire.
-            // Sticking with `alert()` since no custom UI modal for alerts was provided for this component yet.
-            alert("Authorization Denied: Only Admin or Quality Inspector can initiate a Recall.");
+            showToast("Authorization Denied: Only Admin or Quality Inspector can initiate a Recall.", 'error');
             return;
         }
+        setShowRecallModal(true);
+    };
 
+    const confirmRecall = async () => {
         setIsRecalling(true);
+        setShowRecallModal(false);
 
         try {
             // In a real app, we'd derive the batch from the trace result. 
@@ -47,9 +64,10 @@ export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => {
                 `Batch ${result.batchLot} (${result.affectedCount} Units) set to QUARANTINE status. Action ID: ${result.actionId}`
             );
 
-            alert(`Recall Initiated: ${result.affectedCount} units of lot ${result.batchLot} have been flagged and placed on quarantine status across all warehouses.`);
+            showToast(`Recall Initiated: ${result.affectedCount} units flagged.`, 'success');
         } catch (e) {
             console.error("Recall failed", e);
+            showToast("Recall failed. Please try again.", 'error');
         } finally {
             setIsRecalling(false);
         }
@@ -88,7 +106,7 @@ export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => {
                             <p className="text-sm text-gray-500 mt-1">Full lifecycle traceability for <span className="font-mono font-bold text-gray-800">{searchTerm}</span></p>
                         </div>
                         <button
-                            onClick={handleRecall}
+                            onClick={handleRecallClick}
                             disabled={isRecalling || !isRecallAuthorized} // Disabled based on role
                             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-colors
                                 ${isRecallAuthorized
@@ -241,6 +259,64 @@ export const TraceView: React.FC<TraceViewProps> = ({ currentUserRole }) => {
 
                 </div>
             )}
+
+            {/* Recall History */}
+            {recallHistory.length > 0 && (
+                <div className="mt-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                    <h3 className="text-lg font-display font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <History size={20} className="text-gray-400" />
+                        Recall History
+                    </h3>
+                    <div className="space-y-3">
+                        {recallHistory.map((log, i) => (
+                            <div key={i} className="flex items-start gap-4 p-4 bg-red-50 rounded-2xl border border-red-100">
+                                <div className="p-2 bg-white rounded-xl text-red-500 shadow-sm">
+                                    <AlertOctagon size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-gray-900">{log.action}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{log.details}</p>
+                                    <p className="text-[10px] text-gray-400 mt-2 font-mono">{log.timestamp} • {log.actor}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Recall Confirmation Modal */}
+            {showRecallModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 md:p-8 border border-red-100">
+                        <div className="flex items-center justify-center w-16 h-16 bg-red-50 text-red-600 rounded-2xl mb-6 mx-auto">
+                            <AlertTriangle size={32} />
+                        </div>
+                        <h3 className="text-2xl font-display font-bold text-center text-gray-900 mb-2">Confirm Recall?</h3>
+                        <p className="text-center text-gray-500 mb-8">
+                            You are about to initiate a <span className="font-bold text-gray-900">Global Recall</span> for Batch <span className="font-mono bg-gray-100 px-1 rounded">LOT-99812A</span>.
+                            <br /><br />
+                            This will immediately flag <span className="font-bold text-red-600">450 Units</span> as QUARANTINED and notify all logistics partners.
+                        </p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setShowRecallModal(false)}
+                                className="flex-1 py-3 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmRecall}
+                                className="flex-1 py-3 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-200 transition-all"
+                            >
+                                Confirm Recall
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast Notification */}
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         </div>
     );
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BackendAPI } from '../services/backend/api.ts';
-import { StatusBadge, TacticalCard } from './Shared.tsx';
-import { ShieldCheck, ArrowRight, AlertTriangle, CheckCircle, RefreshCw, Plus, X, Package, DollarSign } from 'lucide-react';
+import { StatusBadge, TacticalCard, Toast } from './Shared.tsx';
+import { ShieldCheck, ArrowRight, AlertTriangle, CheckCircle, RefreshCw, Plus, X, Package, DollarSign, Download } from 'lucide-react';
 import { PurchaseOrder, Vendor, PurchaseOrderStatus, SystemUser } from '../types.ts';
 import { MOCK_PART_NUMBERS } from '../services/mockData.ts';
 
@@ -126,6 +126,11 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({ currentUser })
    const [resolvingId, setResolvingId] = useState<string | null>(null);
    const [isPOModalOpen, setIsPOModalOpen] = useState(false);
    const [isLoading, setIsLoading] = useState(true); // Added explicit loading state
+   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+   const showToast = (message: string, type: 'success' | 'error') => {
+      setToast({ message, type });
+   };
 
    // Initial Data Load (Fixes the hang by ensuring try...catch)
    useEffect(() => {
@@ -189,9 +194,45 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({ currentUser })
       // Simulate API call and final confirmation
       setTimeout(() => {
          setResolvingId(null);
-         alert(`Discrepancy for ${id} has been flagged for manual override. Audit Log updated.`);
-         // In a real app, this would trigger an update to the underlying Receiving/Invoice data.
+         showToast(`Discrepancy for ${id} flagged for manual override.`, 'success');
       }, 1000);
+   };
+
+   // Receive PO Action
+   const handleReceive = async (poId: string) => {
+      try {
+         const updatedPO = await BackendAPI.receivePurchaseOrder(poId, currentUser);
+         setPurchaseOrders(prev => prev.map(po => po.id === poId ? updatedPO : po));
+         showToast(`PO ${poId} received. Inventory updated.`, 'success');
+      } catch (e) {
+         console.error("Failed to receive PO:", e);
+         showToast("Failed to receive PO.", 'error');
+      }
+   };
+
+   // Export CSV Action
+   const handleExportCSV = () => {
+      const headers = ['PO Number', 'Vendor', 'Date', 'Total Amount', 'Status'];
+      const rows = purchaseOrders.map(po => {
+         const vendor = vendors.find(v => v.id === po.vendorId);
+         return [
+            po.id,
+            vendor?.name || 'Unknown',
+            po.date,
+            po.totalAmount.toFixed(2),
+            po.status
+         ].join(',');
+      });
+
+      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "purchase_orders.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Purchase Orders exported to CSV.", 'success');
    };
 
    // Renders the loading screen while data is being fetched
@@ -315,13 +356,22 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({ currentUser })
          <div className="flex-1 bg-white rounded-3xl shadow-soft border border-gray-100 p-4 md:p-6 overflow-hidden flex flex-col">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                <h3 className="font-display text-lg font-semibold tracking-tight text-gray-900">Active Purchase Orders</h3>
-               <button
-                  onClick={() => setIsPOModalOpen(true)}
-                  className="flex items-center gap-2 text-sm font-bold bg-blue-50 text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-100 transition-colors shadow-key w-full sm:w-auto justify-center"
-               >
-                  <Plus size={16} />
-                  Create New PO (F)
-               </button>
+               <div className="flex gap-2 w-full sm:w-auto">
+                  <button
+                     onClick={handleExportCSV}
+                     className="flex items-center gap-2 text-sm font-bold bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors shadow-sm flex-1 sm:flex-initial justify-center"
+                  >
+                     <Download size={16} />
+                     Export CSV
+                  </button>
+                  <button
+                     onClick={() => setIsPOModalOpen(true)}
+                     className="flex items-center gap-2 text-sm font-bold bg-blue-50 text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-100 transition-colors shadow-key flex-1 sm:flex-initial justify-center"
+                  >
+                     <Plus size={16} />
+                     Create New PO (F)
+                  </button>
+               </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -369,7 +419,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({ currentUser })
                                     </button>
                                  ) : po.status === PurchaseOrderStatus.SENT || po.status === PurchaseOrderStatus.PARTIAL ? (
                                     <button
-                                       onClick={() => alert(`Simulate Receiving for ${po.id}`)}
+                                       onClick={() => handleReceive(po.id)}
                                        className="text-xs font-bold bg-green-50 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors flex items-center gap-2 ml-auto"
                                     >
                                        <Package size={12} /> Receive
@@ -387,6 +437,8 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({ currentUser })
                </table>
             </div>
          </div>
+         {/* Toast Notification */}
+         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       </div>
    );
 };

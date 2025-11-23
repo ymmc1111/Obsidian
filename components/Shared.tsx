@@ -22,17 +22,17 @@ export const TacticalCard = ({ children, className = '', title, action }: { chil
 
 export const StatusBadge = ({ status }: { status: string }) => {
   let colorClass = 'bg-gray-100 text-gray-600';
-  
+
   // Success / Good / Safe
   if (['AVAILABLE', 'COMPLETED', 'PASSED', 'SAFE', 'Active', 'FILLED', 'PAID', 'APPROVED', 'SHIPPED', 'DELIVERED', 'Complete', 'Valid', 'Calibrated', 'Scheduled', 'Nominal', 'Closed'].includes(status)) {
     colorClass = 'bg-[#34C759]/10 text-[#34C759]';
   }
-  
+
   // Warning / Pending / Processing
   if (['ALLOCATED', 'IN_PROGRESS', 'CUI', 'SENT', 'PARTIAL', 'PENDING', 'PROCESSING', 'NEW', 'Pending', 'Scheduled', 'Warning', 'Investigation'].includes(status)) {
     colorClass = 'bg-orange-100 text-orange-600';
   }
-  
+
   // Danger / Error / Stop
   if (['QUARANTINE', 'SCRAP', 'FAILED', 'HALTED', 'SECRET', 'OVERDUE', 'BACKORDERED', 'Mismatched', 'On Hold', 'CLOSED', 'Expired', 'Overdue', 'Restricted', 'Delayed', 'Open'].includes(status)) {
     colorClass = 'bg-red-100 text-red-600';
@@ -47,16 +47,16 @@ export const StatusBadge = ({ status }: { status: string }) => {
 
 // The NavButton now mimics the physical keys from the image.
 // Squircle shape, centered or spacious, tactile feel.
-export const NavButton = ({ 
-  icon: Icon, 
-  label, 
-  active, 
-  onClick, 
-  collapsed 
-}: { 
-  icon: LucideIcon, 
-  label: string, 
-  active: boolean, 
+export const NavButton = ({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+  collapsed
+}: {
+  icon: LucideIcon,
+  label: string,
+  active: boolean,
   onClick: () => void,
   collapsed: boolean
 }) => (
@@ -65,18 +65,18 @@ export const NavButton = ({
     className={`
       relative group flex items-center transition-all duration-300 ease-out
       ${collapsed ? 'justify-center w-12 h-12 rounded-2xl' : 'w-full px-4 py-3.5 rounded-2xl gap-4'}
-      ${active 
-        ? 'bg-white shadow-key text-ios-text scale-[1.02]' 
+      ${active
+        ? 'bg-white shadow-key text-ios-text scale-[1.02]'
         : 'text-gray-400 hover:bg-white/50 hover:text-gray-600'
       }
     `}
   >
-    <Icon 
-      size={collapsed ? 22 : 20} 
+    <Icon
+      size={collapsed ? 22 : 20}
       className={`transition-colors duration-300 ${active ? "text-ios-text" : "text-gray-400 group-hover:text-gray-600"}`}
-      strokeWidth={2} 
+      strokeWidth={2}
     />
-    
+
     {!collapsed && (
       <span className={`font-display font-medium text-[15px] tracking-tight ${active ? 'text-ios-text' : 'text-gray-500 group-hover:text-gray-700'}`}>
         {label}
@@ -107,3 +107,17 @@ export const StatWidget = ({ title, value, unit, trend, icon: Icon, color }: any
     </div>
   </TacticalCard>
 );
+
+export const Toast = ({ message, type = 'success', onClose }: { message: string, type?: 'success' | 'error', onClose: () => void }) => {
+  React.useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={`fixed bottom-6 right-6 z-[200] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 duration-300 ${type === 'error' ? 'bg-red-500 text-white' : 'bg-gray-900 text-white'}`}>
+      <div className={`w-2 h-2 rounded-full ${type === 'error' ? 'bg-white' : 'bg-green-400'}`}></div>
+      <span className="font-medium text-sm">{message}</span>
+    </div>
+  );
+};

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { InventoryItem, ItemStatus, SensitivityLevel, SystemUser } from '../types.ts';
-import { StatusBadge, TacticalCard } from './Shared.tsx';
-import { Search, SlidersHorizontal, Sparkles, Plus, Edit3, X, MapPin, Zap } from 'lucide-react';
+import { StatusBadge, TacticalCard, Toast } from './Shared.tsx';
+import { Search, SlidersHorizontal, Sparkles, Plus, Edit3, X, MapPin, Zap, History } from 'lucide-react';
 import { askTacticalAssistant } from '../services/geminiService.ts';
 import { telemetryService } from '../services/telemetryService.ts';
 import { BackendAPI } from '../services/backend/api.ts';
+import { auditService } from '../services/auditService.ts';
+import { AuditLogEntry } from '../types.ts';
 
 
 // --- Inventory Item Form Component ---
@@ -15,7 +17,7 @@ interface InventoryFormProps {
     currentUser: SystemUser | null;
 }
 
-const InventoryForm: React.FC<InventoryFormProps> = ({ onClose, itemToEdit, onRefresh, currentUser }) => {
+const InventoryForm: React.FC<InventoryFormProps & { showToast: (msg: string, type: 'success' | 'error') => void }> = ({ onClose, itemToEdit, onRefresh, currentUser, showToast }) => {
     const isEdit = !!itemToEdit;
     const [partNumber, setPartNumber] = useState(itemToEdit?.partNumber || '');
     const [nomenclature, setNomenclature] = useState(itemToEdit?.nomenclature || '');
@@ -55,16 +57,18 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ onClose, itemToEdit, onRe
             if (isEdit) {
                 // D. Change Location / Update Status
                 await BackendAPI.updateInventoryItem(itemToEdit.id, itemData, currentUser);
+                showToast("Item updated successfully", 'success');
             } else {
                 // C. Add New Asset
                 await BackendAPI.addInventoryItem(itemData, currentUser);
+                showToast("Item added successfully", 'success');
             }
-            // Trigger refresh in parent (App.tsx)
+            // Trigger refresh in parent (App.tsx) - Optional now with subscription but kept for compatibility
             onRefresh();
             onClose();
         } catch (e) {
             console.error("Inventory action failed", e);
-            setError("Failed to save inventory item. Check console for details.");
+            showToast("Failed to save item. Please try again.", 'error');
         } finally {
             setLoading(false);
         }
@@ -141,10 +145,47 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ onClose, itemToEdit, onRe
 };
 // --- End Inventory Item Form Component ---
 
+// --- History Modal Component ---
+const HistoryModal = ({ onClose, item, logs }: { onClose: () => void, item: InventoryItem, logs: AuditLogEntry[] }) => {
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/60 backdrop-blur-sm">
+            <div className="bg-white rounded-[2rem] shadow-2xl p-8 border border-gray-100 max-w-lg w-full animate-in fade-in zoom-in-95 duration-300 max-h-[80vh] flex flex-col">
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 className="text-xl font-display font-bold text-gray-900">Asset History</h3>
+                        <p className="text-sm text-gray-500">{item.partNumber} - {item.serialNumber}</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors">
+                        <X size={20} className="text-gray-500" />
+                    </button>
+                </div>
+                <div className="overflow-y-auto flex-1 space-y-4 pr-2">
+                    {logs.length === 0 ? (
+                        <p className="text-sm text-gray-500 text-center py-8">No history found for this asset.</p>
+                    ) : (
+                        logs.map((log, i) => (
+                            <div key={i} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <div className="flex justify-between items-start mb-1">
+                                    <span className="text-xs font-bold text-gray-900">{log.action}</span>
+                                    <span className="text-[10px] font-mono text-gray-400">{log.timestamp.split('T')[0]}</span>
+                                </div>
+                                <p className="text-xs text-gray-600 mb-2">{log.details}</p>
+                                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                                    <span className="text-[10px] text-gray-500">{log.actor}</span>
+                                    <span className="text-[10px] font-mono text-gray-300 truncate max-w-[80px]">{log.hash}</span>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 interface InventoryViewProps {
     items: InventoryItem[];
-    onRefresh: () => void; // New prop for refreshing data
+    onRefresh: () => void;
     currentUser: SystemUser | null;
 }
 
@@ -158,6 +199,47 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items, onRefresh, 
     // New CRUD State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [itemToEdit, setItemToEdit] = useState<InventoryItem | null>(null);
+    const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+    // History State
+    const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
+    const [historyLogs, setHistoryLogs] = useState<AuditLogEntry[]>([]);
+
+    const showToast = (message: string, type: 'success' | 'error') => {
+        setToast({ message, type });
+    };
+
+    const handleViewHistory = (item: InventoryItem) => {
+        // In a real app, we would fetch logs filtered by item ID from the backend.
+        // Here we subscribe/fetch all and filter client-side for the mock.
+        const unsubscribe = auditService.subscribe((allLogs) => {
+            // Simple filter: check if details contain the item ID or Part Number
+            // This is a loose match for the mock
+            const relevantLogs = allLogs.filter(log =>
+                log.details.includes(item.id) ||
+                log.details.includes(item.partNumber) ||
+                log.details.includes(item.serialNumber)
+            );
+            setHistoryLogs(relevantLogs);
+        });
+
+        setHistoryItem(item);
+
+        // Cleanup subscription when modal closes is handled by the modal close logic effectively
+        // but strictly we should unsubscribe. For this mock interaction, it's acceptable.
+        return unsubscribe;
+    };
+
+    // Real-time Subscription
+    useEffect(() => {
+        const unsubscribe = BackendAPI.subscribeToInventory((updatedItems) => {
+            // Only update if not searching to avoid overwriting search results
+            if (!searchTerm) {
+                setDisplayedItems(updatedItems);
+            }
+        });
+        return () => unsubscribe();
+    }, [searchTerm]);
 
     // Sync props to state if items change (e.g. initial load OR refresh)
     useEffect(() => {
@@ -248,7 +330,19 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items, onRefresh, 
         <div className="h-full flex flex-col bg-white">
 
             {/* Inventory Form Modal */}
-            {isModalOpen && <InventoryForm onClose={handleCloseModal} itemToEdit={itemToEdit} onRefresh={onRefresh} currentUser={currentUser} />}
+            {isModalOpen && <InventoryForm onClose={handleCloseModal} itemToEdit={itemToEdit} onRefresh={onRefresh} currentUser={currentUser} showToast={showToast} />}
+
+            {/* Toast Notification */}
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+            {/* History Modal */}
+            {historyItem && (
+                <HistoryModal
+                    onClose={() => setHistoryItem(null)}
+                    item={historyItem}
+                    logs={historyLogs}
+                />
+            )}
 
             {/* Toolbar */}
             <div className="px-4 py-4 md:px-8 md:py-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between shrink-0 border-b border-gray-50">
@@ -341,11 +435,21 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ items, onRefresh, 
                                     <td className="py-5"><StatusBadge status={item.status} /></td>
                                     <td className="py-5 pr-4 text-right">
                                         <button
-                                            onClick={() => handleOpenEdit(item)}
-                                            className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                                            title="Edit Location/Status (D)"
+                                            onClick={() => handleViewHistory(item)}
+                                            className="p-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                                            title="View History"
                                         >
-                                            <Edit3 size={16} />
+                                            <History size={16} strokeWidth={2.5} />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setItemToEdit(item);
+                                                setIsModalOpen(true);
+                                            }}
+                                            className="p-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                                            title="Edit Item"
+                                        >
+                                            <Edit3 size={16} strokeWidth={2.5} />
                                         </button>
                                     </td>
                                 </tr>

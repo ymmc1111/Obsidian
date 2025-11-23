@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BackendAPI } from '../services/backend/api.ts';
-import { TacticalCard, StatusBadge } from './Shared.tsx';
-import { Zap, AlertCircle, PenTool, X, Plus, Edit3, Trash2 } from 'lucide-react';
+import { TacticalCard, StatusBadge, Toast } from './Shared.tsx';
+import { Zap, AlertCircle, PenTool, X, Plus, Edit3, Trash2, Download } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend, Cell } from 'recharts';
 import { ComplianceMode, ProductionSchedule, CalibrationRecord, SystemUser } from '../types.ts';
 
@@ -11,7 +11,7 @@ const PART_NUMBERS = ['XB-70-TI', 'GUID-SYS-V4', 'THRUSTER-NZL-09', 'ELEC-CTRL-P
 const STATUS_OPTIONS = ['Scheduled', 'In Progress', 'Delayed', 'Completed'];
 
 // --- Schedule Form Component (Modal) ---
-const ScheduleForm = ({ onClose, scheduleToEdit, currentUser }: { onClose: () => void, scheduleToEdit: ProductionSchedule | null, currentUser: SystemUser | null }) => {
+const ScheduleForm = ({ onClose, scheduleToEdit, currentUser, showToast }: { onClose: () => void, scheduleToEdit: ProductionSchedule | null, currentUser: SystemUser | null, showToast: (msg: string, type: 'success' | 'error') => void }) => {
    const isEdit = !!scheduleToEdit;
    const [partNumber, setPartNumber] = useState(scheduleToEdit?.partNumber || PART_NUMBERS[0]);
    const [machineCenter, setMachineCenter] = useState(scheduleToEdit?.machineCenter || MACHINE_CENTERS[0]);
@@ -42,17 +42,19 @@ const ScheduleForm = ({ onClose, scheduleToEdit, currentUser }: { onClose: () =>
          if (isEdit && scheduleToEdit) {
             // E. Edit Schedule Details / Update Status
             await BackendAPI.updateProductionSchedule(scheduleToEdit.id, scheduleData, currentUser);
+            showToast("Schedule updated successfully", 'success');
          } else {
             // C. Create Schedule
             await BackendAPI.addProductionSchedule({
                ...scheduleData,
-               loadFactor: 0 // Will be set by Firestore seed/update if not sent
+               loadFactor: Math.floor(Math.random() * 40) + 60 // Mock load factor calculation
             }, currentUser);
+            showToast("Schedule created successfully", 'success');
          }
          onClose();
       } catch (e) {
          console.error("Schedule action failed:", e);
-         setError("Failed to save schedule. Check console for details.");
+         showToast("Failed to save schedule. Please try again.", 'error');
       } finally {
          setLoading(false);
       }
@@ -146,6 +148,11 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode, curr
    // CRUD State Management
    const [isModalOpen, setIsModalOpen] = useState(false);
    const [scheduleToEdit, setScheduleToEdit] = useState<ProductionSchedule | null>(null);
+   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+   const showToast = (message: string, type: 'success' | 'error') => {
+      setToast({ message, type });
+   };
 
    // Real-time Subscription to Production Schedules (Firestore)
    useEffect(() => {
@@ -185,13 +192,35 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode, curr
       try {
          // We are deliberately calling the exposed API endpoint here
          await BackendAPI.deleteProductionSchedule(scheduleId, currentUser);
+         showToast("Schedule deleted successfully", 'success');
          // Firestore subscription handles the UI update automatically
       } catch (e) {
          console.error("Failed to delete schedule:", e);
-         alert("Failed to delete schedule. Check console for details.");
+         showToast("Failed to delete schedule.", 'error');
       }
    }, [currentUser]);
 
+   const handleExportCSV = () => {
+      const headers = ['ID', 'Part Number', 'Machine Center', 'Start Date', 'Quantity', 'Status'];
+      const rows = schedules.map(s => [
+         s.id,
+         s.partNumber,
+         s.machineCenter,
+         s.startDate,
+         s.plannedQty,
+         s.status
+      ].join(','));
+
+      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "production_schedules.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Schedules exported to CSV.", 'success');
+   };
 
    const ganttData = schedules.map(sch => {
       // Calculate offset based on days from Oct 1st
@@ -228,7 +257,10 @@ export const PlanningView: React.FC<PlanningViewProps> = ({ complianceMode, curr
       <div className="h-full flex flex-col bg-white p-4 md:p-8 gap-4 md:gap-6 overflow-y-auto">
 
          {/* Schedule Form Modal */}
-         {isModalOpen && <ScheduleForm onClose={handleCloseModal} scheduleToEdit={scheduleToEdit} currentUser={currentUser} />}
+         {isModalOpen && <ScheduleForm onClose={handleCloseModal} scheduleToEdit={scheduleToEdit} currentUser={currentUser} showToast={showToast} />}
+
+         {/* Toast Notification */}
+         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
          {/* Top: Gantt Timeline */}
          <TacticalCard

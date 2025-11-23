@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { INITIAL_VENDORS } from '../services/mockData';
 import { BackendAPI } from '../services/backend/api';
-import { TacticalCard, StatWidget, StatusBadge } from './Shared';
+import { TacticalCard, StatWidget, StatusBadge, Toast } from './Shared';
 import { DollarSign, Clock, Lock, TrendingUp, Check, AlertTriangle, ArrowUpRight, ArrowDownRight, PieChart, Scale } from 'lucide-react';
-import { Invoice, InvoiceStatus, ComplianceMode, FinancialKPI, SystemUser } from '../types';
+import { Invoice, InvoiceStatus, ComplianceMode, FinancialKPI, SystemUser, UserRole } from '../types';
 import { telemetryService } from '../services/telemetryService';
 
 interface FinanceViewProps {
@@ -14,6 +14,13 @@ interface FinanceViewProps {
 export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode, currentUser }) => {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [financialKPIs, setFinancialKPIs] = useState<FinancialKPI[]>([]);
+    const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+    const showToast = (message: string, type: 'success' | 'error') => {
+        setToast({ message, type });
+    };
+
+    const isFinanceAuthorized = currentUser?.role === UserRole.FINANCIAL_OFFICER || currentUser?.role === UserRole.ADMIN;
 
     // Initial Data Fetch
     useEffect(() => {
@@ -35,6 +42,11 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode, curren
     // Actions
     const approveInvoice = async (id: string) => {
         // C. Approve Invoice
+        if (!isFinanceAuthorized) {
+            showToast("Access Denied: Financial Officer role required.", 'error');
+            return;
+        }
+
         // Optimistic Update
         setInvoices(prev => prev.map(inv =>
             inv.id === id ? { ...inv, status: InvoiceStatus.APPROVED } : inv
@@ -44,17 +56,24 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode, curren
             await BackendAPI.updateInvoiceStatus(id, InvoiceStatus.APPROVED, currentUser);
             // Record KPI: AP Approval
             telemetryService.incrementCounter('ap_approval_count', { invoice_id: id });
+            showToast("Invoice Approved", 'success');
         } catch (e) {
             console.error("Approval failed", e);
             // In real app, revert state here
             setInvoices(prev => prev.map(inv =>
                 inv.id === id ? { ...inv, status: InvoiceStatus.PENDING } : inv
             ));
+            showToast("Approval failed", 'error');
         }
     };
 
     const flagInvoice = async (id: string) => {
         // D. Flag Invoice
+        if (!isFinanceAuthorized) {
+            showToast("Access Denied: Financial Officer role required.", 'error');
+            return;
+        }
+
         // Optimistic Update: Change status to OVERDUE for a Flag action
         setInvoices(prev => prev.map(inv =>
             inv.id === id ? { ...inv, status: InvoiceStatus.OVERDUE } : inv
@@ -62,12 +81,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode, curren
 
         try {
             await BackendAPI.updateInvoiceStatus(id, InvoiceStatus.OVERDUE, currentUser);
+            showToast("Invoice Flagged as Overdue", 'success');
         } catch (e) {
             console.error("Flagging failed", e);
             // In real app, revert state here
             setInvoices(prev => prev.map(inv =>
                 inv.id === id ? { ...inv, status: InvoiceStatus.PENDING } : inv
             ));
+            showToast("Flagging failed", 'error');
         }
     };
 
@@ -241,15 +262,17 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode, curren
                                                     <>
                                                         <button
                                                             onClick={() => approveInvoice(inv.id)}
-                                                            className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
-                                                            title="Approve (C)"
+                                                            disabled={!isFinanceAuthorized}
+                                                            className={`p-2 rounded-lg transition-colors ${isFinanceAuthorized ? 'bg-green-50 text-green-600 hover:bg-green-100' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                                            title={isFinanceAuthorized ? "Approve (C)" : "Role Restricted"}
                                                         >
                                                             <Check size={16} strokeWidth={3} />
                                                         </button>
                                                         <button
                                                             onClick={() => flagInvoice(inv.id)}
-                                                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                                                            title="Flag Overdue (D)"
+                                                            disabled={!isFinanceAuthorized}
+                                                            className={`p-2 rounded-lg transition-colors ${isFinanceAuthorized ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                                            title={isFinanceAuthorized ? "Flag Overdue (D)" : "Role Restricted"}
                                                         >
                                                             <AlertTriangle size={16} strokeWidth={2.5} />
                                                         </button>
@@ -270,6 +293,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ complianceMode, curren
                     </table>
                 </div>
             </div>
+            {/* Toast Notification */}
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         </div>
     );
 };

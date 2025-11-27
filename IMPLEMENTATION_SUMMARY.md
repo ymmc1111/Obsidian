@@ -23,24 +23,50 @@
 - **QR/Barcode Scanner**: Browser-based scanning.
 - **Network Resilience**: Works in dead zones.
 
-## Phase 5: Telemetry Integration (COMPLETE)
+## Phase 5: Telemetry Integration (100% Complete)
+- **MQTT Broker**: Real-time machine data ingestion.
+- **TimescaleDB**: Time-series storage.
+- **WebSocket Stream**: Live dashboard updates.
 
-### Real-Time Machine Monitoring
-- **MQTT Broker**: Mosquitto running on port 1883.
-- **Telemetry Service**: Ingests MQTT → TimescaleDB → WebSocket.
-- **Time-Series DB**: TimescaleDB hypertable for machine data.
-- **WebSocket Stream**: Real-time data to frontend.
+## Phase 6: AI Integration (COMPLETE)
 
-### Dashboard
-- **Live Metrics**: Temperature, vibration, spindle speed, power.
-- **Status Indicators**: NOMINAL/WARNING/CRITICAL thresholds.
-- **Machine Simulator**: Test data generator included.
+### Predictive Maintenance Engine
+- **Algorithm**: Isolation Forest (Anomaly Detection)
+- **Features**: Rolling statistics, rate of change, threshold analysis
+- **Training**: 1 week of historical data per machine
+- **Risk Levels**: LOW → MEDIUM → HIGH → CRITICAL
+
+### AI Service (FastAPI)
+- **Endpoint**: `http://localhost:8000`
+- **Routes**:
+  - `GET /analyze` - Analyze all machines
+  - `GET /predict/{machine_id}` - Predict specific machine
+  - `POST /train/{machine_id}` - Train model
+
+### AI Dashboard
+- **URL**: `http://localhost:3000/ai`
+- **Features**:
+  - Real-time anomaly detection
+  - Risk level visualization
+  - Maintenance recommendations
+  - Current metrics display
 
 ### How to Use
-1. Start telemetry service: `npm run dev --workspace=@pocket-ops/telemetry-service`
-2. Start simulator: `node simulator.js`
-3. View dashboard: `http://localhost:3000/telemetry`
+1. Ensure telemetry is running (simulator.js)
+2. Install AI service: `cd apps/ai-service && poetry install`
+3. Start AI service: `poetry run python src/main.py`
+4. View predictions: `http://localhost:3000/ai`
 
 ## Mission Status
-**ALL PHASES OPERATIONAL**
-The fortress is connected to the factory floor.
+**OPERATION OBSIDIAN: FULLY AUTONOMOUS**
+
+The system now:
+- ✅ Authenticates users with JWT
+- ✅ Records immutable audit trails
+- ✅ Requires dual authorization for critical actions
+- ✅ Works offline in factory dead zones
+- ✅ Scans QR/barcodes for asset tracking
+- ✅ Ingests real-time machine telemetry
+- ✅ **Predicts equipment failures before they happen**
+
+**The fortress has become sentient.**

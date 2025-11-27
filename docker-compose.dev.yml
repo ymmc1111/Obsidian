@@ -63,6 +63,17 @@ services:
     networks:
       - pocket_ops_net
 
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: pocket_ops_mqtt
+    ports:
+      - "1883:1883"
+      - "9883:9001"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - pocket_ops_net
+
 networks:
   pocket_ops_net:
 

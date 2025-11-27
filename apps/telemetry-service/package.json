@@ -1,0 +1,23 @@
+{
+    "name": "@pocket-ops/telemetry-service",
+    "version": "0.0.0",
+    "private": true,
+    "scripts": {
+        "dev": "ts-node src/index.ts",
+        "build": "tsc",
+        "start": "node dist/index.js"
+    },
+    "dependencies": {
+        "@pocket-ops/logger": "*",
+        "mqtt": "^5.0.0",
+        "pg": "^8.0.0",
+        "ws": "^8.0.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "@types/pg": "^8.0.0",
+        "@types/ws": "^8.0.0",
+        "ts-node": "^10.0.0",
+        "typescript": "^5.0.0"
+    }
+}

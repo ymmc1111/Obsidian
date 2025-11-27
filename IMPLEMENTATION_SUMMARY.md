@@ -18,24 +18,29 @@
 - **Kubernetes**: Manifests ready for cloud deployment.
 - **Repository**: [ymmc1111/Obsidian](https://github.com/ymmc1111/Obsidian).
 
-## Phase 4: Manufacturing Hardening (In Progress)
+## Phase 4: Manufacturing Hardening (100% Complete)
+- **Offline-First**: RxDB local database with auto-sync.
+- **QR/Barcode Scanner**: Browser-based scanning.
+- **Network Resilience**: Works in dead zones.
 
-### Offline-First Architecture
-- **RxDB**: Local database for offline operation.
-- **Sync Engine**: Bidirectional sync with server when online.
-- **Network Detection**: Real-time online/offline status.
+## Phase 5: Telemetry Integration (COMPLETE)
 
-### Hardware Integration
-- **QR/Barcode Scanner**: Browser-based scanning using ZXing.
-- **Shop Floor Ready**: Works in Faraday cages and dead zones.
+### Real-Time Machine Monitoring
+- **MQTT Broker**: Mosquitto running on port 1883.
+- **Telemetry Service**: Ingests MQTT → TimescaleDB → WebSocket.
+- **Time-Series DB**: TimescaleDB hypertable for machine data.
+- **WebSocket Stream**: Real-time data to frontend.
 
-### Features
-- ✅ Offline data persistence
-- ✅ Automatic background sync
-- ✅ QR/Barcode scanning
-- ✅ Network status indicator
-- ✅ Pending sync queue
+### Dashboard
+- **Live Metrics**: Temperature, vibration, spindle speed, power.
+- **Status Indicators**: NOMINAL/WARNING/CRITICAL thresholds.
+- **Machine Simulator**: Test data generator included.
 
-## Next Steps
-- **Test**: Verify offline mode by disabling network.
-- **Phase 5**: Telemetry integration (MQTT/OPC-UA).
+### How to Use
+1. Start telemetry service: `npm run dev --workspace=@pocket-ops/telemetry-service`
+2. Start simulator: `node simulator.js`
+3. View dashboard: `http://localhost:3000/telemetry`
+
+## Mission Status
+**ALL PHASES OPERATIONAL**
+The fortress is connected to the factory floor.

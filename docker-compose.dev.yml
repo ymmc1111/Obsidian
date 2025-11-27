@@ -74,6 +74,17 @@ services:
     networks:
       - pocket_ops_net
 
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.8.0
+    container_name: pocket_ops_mlflow
+    ports:
+      - "5000:5000"
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns
+    volumes:
+      - pocketops_mlflow_data:/mlflow
+    networks:
+      - pocket_ops_net
+
 networks:
   pocket_ops_net:
 
@@ -83,3 +94,4 @@ volumes:
   pocketops_timescale_data:
   pocketops_minio_data:
   pocketops_clickhouse_data:
+  pocketops_mlflow_data:

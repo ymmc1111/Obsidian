@@ -34,86 +34,136 @@
 - **AI Service**: FastAPI REST API.
 - **AI Dashboard**: Real-time predictions.
 
-## Phase 7: Production Hardening (COMPLETE)
+## Phase 7: Production Hardening (100% Complete)
+- **Documentation**: Comprehensive README.
+- **Health Checks**: All services monitored.
+- **Prometheus**: Metrics collection.
+- **Alert Rules**: Critical system alerts.
 
-### Documentation
-- **README.md**: Comprehensive deployment guide
-- **Architecture**: Full system diagram
-- **Quick Start**: Step-by-step setup instructions
-- **Configuration**: Environment variable reference
+## Phase 8: Advanced Analytics (COMPLETE)
 
-### Monitoring & Observability
-- **Health Checks**: `/health` endpoints on all services
-- **Prometheus**: Metrics collection configuration
-- **Alert Rules**: Critical system alerts
-  - Service downtime
-  - Temperature thresholds
-  - Vibration limits
-  - AI anomaly detection
-  - Database connections
-  - Disk space
+### ML Training Pipeline
+- **Automated Training**: Scheduled daily retraining
+- **Hyperparameter Tuning**: Optuna optimization (20 trials)
+- **Feature Engineering**: 40+ engineered features
+- **Multiple Algorithms**: Isolation Forest + Random Forest
 
-### Production Readiness
-- ✅ Health check endpoints
-- ✅ Structured logging
-- ✅ Error handling
-- ✅ Environment configuration
-- ✅ Docker multi-stage builds
-- ✅ Kubernetes manifests
-- ✅ Alert rules
-- ✅ Documentation
+### MLflow Integration
+- **Experiment Tracking**: All runs logged
+- **Model Registry**: Version control for models
+- **Metrics**: F1, Precision, Recall, AUC
+- **Artifacts**: Models, scalers, confusion matrices, ROC curves
+
+### Model Evaluation
+- **Performance Comparison**: Compare all models
+- **Best Model Selection**: Automatic registration
+- **Visualizations**: Confusion matrix, ROC curves
+- **Feature Importance**: Understand model decisions
+
+### Scheduler
+- **Automated Retraining**: Daily at 2 AM
+- **Continuous Improvement**: Models improve with new data
+- **Production Deployment**: Best model auto-registered
+
+### MLflow UI
+- **Dashboard**: http://localhost:5000
+- **Experiment Browser**: View all training runs
+- **Model Registry**: Manage model versions
+- **Artifact Storage**: Download models and plots
 
 ## Mission Status
-**OPERATION OBSIDIAN: PRODUCTION READY**
+**OPERATION OBSIDIAN: FULLY AUTONOMOUS & SELF-IMPROVING**
 
-The system is:
-- ✅ **Secure**: Zero-trust architecture with JWT + Double-Sig
-- ✅ **Resilient**: Offline-first, works in dead zones
-- ✅ **Intelligent**: AI-powered predictive maintenance
-- ✅ **Observable**: Health checks, metrics, alerts
-- ✅ **Documented**: Comprehensive guides and references
-- ✅ **Deployable**: Docker + Kubernetes ready
+The system now:
+- ✅ **Authenticates** users with JWT + Double-Sig
+- ✅ **Records** immutable audit trails
+- ✅ **Works offline** in factory dead zones
+- ✅ **Scans** QR/barcodes for asset tracking
+- ✅ **Ingests** real-time machine telemetry
+- ✅ **Predicts** equipment failures before they happen
+- ✅ **Monitors** system health with alerts
+- ✅ **Trains** ML models automatically
+- ✅ **Improves** predictions continuously
 
-**The fortress is ready for combat.**
+**The fortress is now sentient and self-evolving.**
 
 ---
 
-## Deployment Checklist
+## Complete System Architecture
 
-### Development
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   PRESENTATION LAYER                         │
+│  Next.js (Command Interface) • Streamlit (Science Lab)      │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────┴──────────────────────────────────────┐
+│                    APPLICATION LAYER                         │
+│  NestJS API • FastAPI AI Service • Telemetry Service        │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────┴──────────────────────────────────────┐
+│                      DATA LAYER                              │
+│  PostgreSQL • TimescaleDB • ClickHouse • MinIO • RxDB       │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────┴──────────────────────────────────────┐
+│                   INTELLIGENCE LAYER                         │
+│  ML Pipeline • MLflow • Optuna • Isolation Forest • RF      │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────┴──────────────────────────────────────┐
+│                  INFRASTRUCTURE LAYER                        │
+│  Docker • Kubernetes • Prometheus • MQTT • WebSockets       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Quick Start Guide
+
+### 1. Start Infrastructure
 ```bash
-# 1. Start infrastructure
 docker compose -f docker-compose.dev.yml up -d
+```
 
-# 2. Run migrations
+### 2. Run Migrations
+```bash
 cat packages/database/migrations/*.sql | docker exec -i pocket_ops_db psql -U admin -d pocket_ops
-
-# 3. Start services
-npm run dev
 ```
 
-### Production
+### 3. Start Services
 ```bash
-# 1. Build images
-./build-images.sh
+# Terminal 1 - API
+npm run dev --workspace=@pocket-ops/api-core
 
-# 2. Deploy stack
-docker compose up -d
+# Terminal 2 - Web Client
+npm run dev --workspace=@pocket-ops/web-client
 
-# OR deploy to Kubernetes
-kubectl apply -k k8s/base
+# Terminal 3 - Telemetry
+npm run dev --workspace=@pocket-ops/telemetry-service
+
+# Terminal 4 - AI Service
+cd apps/ai-service && poetry run python src/main.py
+
+# Terminal 5 - ML Pipeline (optional)
+cd apps/ml-pipeline && poetry run python scheduler.py
 ```
 
-### Monitoring
+### 4. Generate Data
 ```bash
-# View logs
-docker compose logs -f
-
-# Check health
-curl http://localhost:3001/health
-curl http://localhost:8000/health
+node simulator.js
 ```
+
+### 5. Access Applications
+- **Web Client**: http://localhost:3000
+- **Science Lab**: http://localhost:8501
+- **AI Service**: http://localhost:8000
+- **MLflow**: http://localhost:5000
+- **MinIO**: http://localhost:9001
 
 ---
 
 **Repository**: https://github.com/ymmc1111/Obsidian
+
+**Status**: Production Ready • Self-Improving • Fully Autonomous

@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: pocket_ops_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: pocket_ops
+    ports:
+      - "5432:5432"
+    volumes:
+      - pocketops_postgres_data:/var/lib/postgresql/data
+    networks:
+      - pocket_ops_net
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: pocket_ops_telemetry
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=pocket_ops_telemetry
+    ports:
+      - "5433:5432"
+    volumes:
+      - pocketops_timescale_data:/var/lib/postgresql/data
+    networks:
+      - pocket_ops_net
+
+  minio:
+    image: minio/minio
+    container_name: pocket_ops_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+    command: server /data --console-address ":9001"
+    volumes:
+      - pocketops_minio_data:/data
+    networks:
+      - pocket_ops_net
+
+  clickhouse:
+    image: clickhouse/clickhouse-server
+    container_name: pocket_ops_clickhouse
+    ports:
+      - "8123:8123"
+      - "9002:9000"
+    environment:
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=password
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    volumes:
+      - pocketops_clickhouse_data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    networks:
+      - pocket_ops_net
+
+networks:
+  pocket_ops_net:
+
+
+volumes:
+  pocketops_postgres_data:
+  pocketops_timescale_data:
+  pocketops_minio_data:
+  pocketops_clickhouse_data:

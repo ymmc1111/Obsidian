@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "science-lab"
+version = "0.1.0"
+description = "Operation Obsidian Science Lab"
+authors = ["Pocket Ops Team"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+streamlit = "^1.28.0"
+pandas = "^2.1.0"
+clickhouse-connect = "^0.6.0"
+plotly = "^5.17.0"
+watchdog = "^3.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

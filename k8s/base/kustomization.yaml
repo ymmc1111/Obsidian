@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - postgres.yaml
+  - clickhouse.yaml
+  - minio.yaml
+  - api-core.yaml
+  - web-client.yaml
+  - data-pipeline.yaml
+  - science-lab.yaml

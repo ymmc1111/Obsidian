@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-client
+  namespace: pocket-ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-client
+  template:
+    metadata:
+      labels:
+        app: web-client
+    spec:
+      containers:
+        - name: web-client
+          image: pocket-ops/web-client:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: "http://api-core:3001"
+          ports:
+            - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-client
+  namespace: pocket-ops
+spec:
+  selector:
+    app: web-client
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 3000

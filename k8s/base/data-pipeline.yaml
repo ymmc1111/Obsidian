@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-pipeline
+  namespace: pocket-ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-pipeline
+  template:
+    metadata:
+      labels:
+        app: data-pipeline
+    spec:
+      containers:
+        - name: data-pipeline
+          image: pocket-ops/data-pipeline:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_HOST
+              value: "postgres"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: "admin"
+            - name: POSTGRES_PASSWORD
+              value: "password"
+            - name: POSTGRES_DB
+              value: "pocket_ops"
+            - name: CLICKHOUSE_HOST
+              value: "http://clickhouse:8123"
+            - name: CLICKHOUSE_USER
+              value: "default"
+            - name: CLICKHOUSE_PASSWORD
+              value: "password"

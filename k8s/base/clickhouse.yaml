@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clickhouse
+  namespace: pocket-ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clickhouse
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+    spec:
+      containers:
+        - name: clickhouse
+          image: clickhouse/clickhouse-server
+          env:
+            - name: CLICKHOUSE_USER
+              value: "default"
+            - name: CLICKHOUSE_PASSWORD
+              value: "password"
+            - name: CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT
+              value: "1"
+          ports:
+            - containerPort: 8123
+            - containerPort: 9000
+          volumeMounts:
+            - name: clickhouse-storage
+              mountPath: /var/lib/clickhouse
+          resources:
+            limits:
+              nofile: 262144
+      volumes:
+        - name: clickhouse-storage
+          persistentVolumeClaim:
+            claimName: clickhouse-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  namespace: pocket-ops
+spec:
+  selector:
+    app: clickhouse
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+    - name: native
+      port: 9000
+      targetPort: 9000
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clickhouse-pvc
+  namespace: pocket-ops
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

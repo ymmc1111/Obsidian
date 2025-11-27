@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-core
+  namespace: pocket-ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-core
+  template:
+    metadata:
+      labels:
+        app: api-core
+    spec:
+      containers:
+        - name: api-core
+          image: pocket-ops/api-core:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_HOST
+              value: "postgres"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: "admin"
+            - name: POSTGRES_PASSWORD
+              value: "password"
+            - name: POSTGRES_DB
+              value: "pocket_ops"
+            - name: JWT_SECRET
+              value: "secretKey"
+          ports:
+            - containerPort: 3001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-core
+  namespace: pocket-ops
+spec:
+  selector:
+    app: api-core
+  ports:
+    - port: 3001
+      targetPort: 3001

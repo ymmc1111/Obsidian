@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: science-lab
+  namespace: pocket-ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: science-lab
+  template:
+    metadata:
+      labels:
+        app: science-lab
+    spec:
+      containers:
+        - name: science-lab
+          image: pocket-ops/science-lab:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: CLICKHOUSE_HOST
+              value: "clickhouse"
+            - name: CLICKHOUSE_PORT
+              value: "8123"
+            - name: CLICKHOUSE_USER
+              value: "default"
+            - name: CLICKHOUSE_PASSWORD
+              value: "password"
+          ports:
+            - containerPort: 8501
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: science-lab
+  namespace: pocket-ops
+spec:
+  selector:
+    app: science-lab
+  type: LoadBalancer
+  ports:
+    - port: 8501
+      targetPort: 8501

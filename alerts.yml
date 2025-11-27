@@ -1,0 +1,63 @@
+groups:
+  - name: operation_obsidian_alerts
+    interval: 30s
+    rules:
+      # Service Health
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been down for more than 1 minute"
+
+      # Machine Temperature
+      - alert: CriticalTemperature
+        expr: machine_temperature > 210
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical temperature on {{ $labels.machine_id }}"
+          description: "Temperature is {{ $value }}°C (threshold: 210°C)"
+
+      # Machine Vibration
+      - alert: ExcessiveVibration
+        expr: machine_vibration > 2.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Excessive vibration on {{ $labels.machine_id }}"
+          description: "Vibration is {{ $value }} mm/s (threshold: 2.5 mm/s)"
+
+      # AI Anomaly Detection
+      - alert: AnomalyDetected
+        expr: ai_anomaly_score < -0.5
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: "Anomaly detected on {{ $labels.machine_id }}"
+          description: "Anomaly score: {{ $value }} - Immediate inspection recommended"
+
+      # Database
+      - alert: DatabaseConnectionsHigh
+        expr: pg_stat_database_numbackends > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connections"
+          description: "{{ $value }} active connections (threshold: 80)"
+
+      # Disk Space
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining"

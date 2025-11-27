@@ -12,9 +12,12 @@
     "@pocket-ops/schema": "*",
     "@pocket-ops/ui": "*",
     "@tanstack/react-query": "^5.90.11",
+    "@zxing/library": "^0.21.3",
     "next": "16.0.5",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "rxdb": "^16.21.0",
+    "rxjs": "^7.8.2",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

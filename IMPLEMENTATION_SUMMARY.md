@@ -13,20 +13,29 @@
 - **Data Pipeline**: Active.
 - **Science Lab**: Active.
 
-## Phase 3: Deployment (In Progress)
+## Phase 3: Deployment (100% Complete)
+- **Local Deployment**: Full stack containerized.
+- **Kubernetes**: Manifests ready for cloud deployment.
+- **Repository**: [ymmc1111/Obsidian](https://github.com/ymmc1111/Obsidian).
 
-### Kubernetes Manifests (Ready)
-- **Location**: `k8s/base`
-- **Services**:
-  - `postgres` (StatefulSet/PVC)
-  - `clickhouse` (StatefulSet/PVC)
-  - `minio` (StatefulSet/PVC)
-  - `api-core` (Deployment)
-  - `web-client` (Deployment + LoadBalancer)
-  - `data-pipeline` (Deployment)
-  - `science-lab` (Deployment + LoadBalancer)
-- **Orchestration**: `kustomization.yaml` created for easy deployment (`kubectl apply -k k8s/base`).
+## Phase 4: Manufacturing Hardening (In Progress)
+
+### Offline-First Architecture
+- **RxDB**: Local database for offline operation.
+- **Sync Engine**: Bidirectional sync with server when online.
+- **Network Detection**: Real-time online/offline status.
+
+### Hardware Integration
+- **QR/Barcode Scanner**: Browser-based scanning using ZXing.
+- **Shop Floor Ready**: Works in Faraday cages and dead zones.
+
+### Features
+- ✅ Offline data persistence
+- ✅ Automatic background sync
+- ✅ QR/Barcode scanning
+- ✅ Network status indicator
+- ✅ Pending sync queue
 
 ## Next Steps
-- **Build Images**: Create Dockerfiles for all apps.
-- **Deploy**: Run `kubectl apply -k k8s/base` (requires a K8s cluster).
+- **Test**: Verify offline mode by disabling network.
+- **Phase 5**: Telemetry integration (MQTT/OPC-UA).

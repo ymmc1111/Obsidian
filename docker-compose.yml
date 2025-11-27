@@ -63,6 +63,77 @@ services:
     networks:
       - pocket_ops_net
 
+  api-core:
+    build:
+      context: .
+      dockerfile: apps/api-core/Dockerfile
+    container_name: pocket_ops_api
+    ports:
+      - "3001:3001"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=pocket_ops
+      - JWT_SECRET=secretKey
+      - LOG_LEVEL=debug
+    depends_on:
+      - postgres
+    networks:
+      - pocket_ops_net
+
+  web-client:
+    build:
+      context: .
+      dockerfile: apps/web-client/Dockerfile
+    container_name: pocket_ops_web
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    depends_on:
+      - api-core
+    networks:
+      - pocket_ops_net
+
+  data-pipeline:
+    build:
+      context: .
+      dockerfile: apps/data-pipeline/Dockerfile
+    container_name: pocket_ops_pipeline
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=pocket_ops
+      - CLICKHOUSE_HOST=http://clickhouse:8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=password
+    depends_on:
+      - postgres
+      - clickhouse
+    networks:
+      - pocket_ops_net
+
+  science-lab:
+    build:
+      context: apps/science-lab
+      dockerfile: Dockerfile
+    container_name: pocket_ops_science
+    ports:
+      - "8501:8501"
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=password
+    depends_on:
+      - clickhouse
+    networks:
+      - pocket_ops_net
+
 networks:
   pocket_ops_net:
 
